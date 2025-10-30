@@ -1,3 +1,5 @@
+// src/popup/popup.js
+
 const statusEl = document.getElementById('status');
 const redirectListEl = document.getElementById('redirect-list');
 const template = document.getElementById('redirect-item-template');
@@ -6,7 +8,27 @@ const showNoiseToggle = document.getElementById('show-noise');
 const noiseSummaryEl = document.getElementById('noise-summary');
 
 const SHOW_NOISE_STORAGE_KEY = 'redirectInspector:showNoiseRequests';
+const REDIRECT_LOG_KEY = 'redirectLog';
+
 let allRedirectRecords = [];
+
+/**
+ * Безопасная отправка сообщения в сервис-воркер.
+ * Не роняет попап, если воркер не поднялся.
+ */
+function sendMessageSafe(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        console.warn('sendMessageSafe:', err.message);
+        resolve({ __error: err.message });
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
 
 function showStatus(message, type = 'info') {
   statusEl.textContent = message;
@@ -27,7 +49,8 @@ function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
   }
 
   noiseSummaryEl.hidden = false;
-  noiseSummaryEl.textContent = hiddenCount === 1 ? '1 likely tracking request hidden' : `${hiddenCount} likely tracking requests hidden`;
+  noiseSummaryEl.textContent =
+    hiddenCount === 1 ? '1 likely tracking request hidden' : `${hiddenCount} likely tracking requests hidden`;
 }
 
 function applyFilters(records) {
@@ -258,13 +281,22 @@ function renderRedirectLog(records) {
 
 async function fetchRedirectLog() {
   showStatus('Loading redirect chains…', 'info');
+
+  // пробуем через фон
+  const response = await sendMessageSafe({ type: 'redirect-inspector:get-log' });
+
+  if (response && !response.__error && !response.error) {
+    allRedirectRecords = Array.isArray(response.log) ? response.log : [];
+    const context = applyFilters(allRedirectRecords);
+    updateStatusForRecords(context);
+    return;
+  }
+
+  // фон не ответил — читаем напрямую из storage
+  console.warn('Background not available / failed, reading local storage…');
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'redirect-inspector:get-log' });
-    if (response?.error) {
-      throw new Error(response.error);
-    }
-    const log = response?.log ?? [];
-    allRedirectRecords = log;
+    const storage = await chrome.storage.local.get({ [REDIRECT_LOG_KEY]: [] });
+    allRedirectRecords = storage[REDIRECT_LOG_KEY] || [];
     const context = applyFilters(allRedirectRecords);
     updateStatusForRecords(context);
   } catch (error) {
@@ -275,17 +307,27 @@ async function fetchRedirectLog() {
 
 async function clearRedirectLog() {
   showStatus('Clearing…', 'info');
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'redirect-inspector:clear-log' });
-    if (!response?.success) {
-      throw new Error(response?.error || 'Unknown error');
-    }
+
+  // 1. пробуем через фон
+  const response = await sendMessageSafe({ type: 'redirect-inspector:clear-log' });
+
+  if (response && !response.__error && response.success) {
+    // фон очистил
     allRedirectRecords = [];
     applyFilters(allRedirectRecords);
     showStatus('Redirect log cleared.', 'success');
-  } catch (error) {
-    console.error(error);
-    showStatus(`Failed to clear redirects: ${error.message}`, 'error');
+    return;
+  }
+
+  // 2. фон не ответил → чистим сами
+  try {
+    await chrome.storage.local.set({ [REDIRECT_LOG_KEY]: [] });
+    allRedirectRecords = [];
+    applyFilters(allRedirectRecords);
+    showStatus('Redirect log cleared (local).', 'success');
+  } catch (err) {
+    console.error('Local clear failed:', err);
+    showStatus(`Failed to clear redirects: ${err.message}`, 'error');
   }
 }
 

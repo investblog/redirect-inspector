@@ -336,142 +336,59 @@ async function finalizeChain(details, errorMessage) {
   scheduleChainFinalization(chain);
 }
 
-// ---- LISTENERS ----
+// ---- RUNTIME MESSAGES (popup <-> background) ----
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // всегда стараемся отвечать, чтобы не было "Receiving end does not exist"
+  const type = message && message.type;
 
-// связать новый запрос с ожидаемым JS-редиректом
-chrome.webRequest.onBeforeRequest.addListener(
-  (details) => {
-    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
-      return;
-    }
+  // 1. отдать лог
+  if (type === 'redirect-inspector:get-log') {
+    chrome.storage.local
+      .get({ [REDIRECT_LOG_KEY]: [] })
+      .then((result) => {
+        sendResponse({ log: result[REDIRECT_LOG_KEY] });
+      })
+      .catch((error) => {
+        console.error('Failed to read redirect log', error);
+        sendResponse({ log: [], error: error?.message || 'Unknown error' });
+      });
 
-    const pending = pendingClientRedirects.get(details.tabId);
-    if (!pending) {
-      return;
-    }
+    // говорим Chrome, что ответ будет асинхронно
+    return true;
+  }
 
-    const chain = chainsById.get(pending.chainId);
-    if (!chain) {
-      pendingClientRedirects.delete(details.tabId);
-      return;
-    }
+  // 2. очистить лог (именно то, что сейчас шлёт попап)
+  if (type === 'redirect-inspector:clear-log') {
+    chrome.storage.local
+      .set({ [REDIRECT_LOG_KEY]: [] })
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error('Failed to clear redirect log', error);
+        sendResponse({ success: false, error: error?.message || 'Unknown error' });
+      });
 
-    attachRequestToChain(chain, details);
-    if (!chain.initialUrl) {
-      chain.initialUrl = details.url;
-    }
+    return true;
+  }
 
-    pendingClientRedirects.delete(details.tabId);
-  },
-  { urls: ['<all_urls>'] }
-);
+  // 3. на всякий случай поддержим старое/альтернативное имя
+  if (type === 'redirect-inspector:clear-redirects') {
+    chrome.storage.local
+      .set({ [REDIRECT_LOG_KEY]: [] })
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error('Failed to clear redirect log', error);
+        sendResponse({ success: false, error: error?.message || 'Unknown error' });
+      });
 
-// HTTP-редиректы
-chrome.webRequest.onBeforeRedirect.addListener(
-  (details) => {
-    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
-      return;
-    }
-    recordRedirectEvent(details);
-  },
-  { urls: ['<all_urls>'] }
-);
+    return true;
+  }
 
-// запрос успешно завершился
-chrome.webRequest.onCompleted.addListener(
-  async (details) => {
-    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
-      return;
-    }
-    await finalizeChain(details);
-  },
-  { urls: ['<all_urls>'] },
-  // ВАЖНО: в MV3 нельзя передавать и responseHeaders, и extraHeaders.
-  // Нам нужны заголовки → оставляем только extraHeaders.
-  ['extraHeaders']
-);
-
-// запрос завершился ошибкой
-chrome.webRequest.onErrorOccurred.addListener(
-  async (details) => {
-    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
-      return;
-    }
-    await finalizeChain(details, details.error);
-  },
-  { urls: ['<all_urls>'] },
-  ['extraHeaders']
-);
-
-// ---- CLIENT-SIDE (JS) REDIRECT TRACKING ----
-if (chrome.webNavigation && typeof chrome.webNavigation.onCommitted === 'object' && typeof chrome.webNavigation.onCommitted.addListener === 'function') {
-  chrome.webNavigation.onCommitted.addListener((details) => {
-    if (typeof details.tabId !== 'number' || details.tabId < 0) {
-      return;
-    }
-
-    const lastUrl = tabLastCommittedUrl.get(details.tabId);
-    tabLastCommittedUrl.set(details.tabId, details.url);
-
-    const chainId = tabChains.get(details.tabId);
-    if (!chainId) {
-      return;
-    }
-
-    const chain = chainsById.get(chainId);
-    if (!chain) {
-      tabChains.delete(details.tabId);
-      return;
-    }
-
-    // интересует только переход, помеченный как client_redirect
-    if (!Array.isArray(details.transitionQualifiers) || !details.transitionQualifiers.includes('client_redirect')) {
-      return;
-    }
-
-    // Переход был из JS → ждём новый запрос
-    if (chain.finalizeTimer) {
-      clearTimeout(chain.finalizeTimer);
-      chain.finalizeTimer = null;
-    }
-
-    chain.awaitingClientRedirect = true;
-    if (chain.awaitingClientRedirectTimer) {
-      clearTimeout(chain.awaitingClientRedirectTimer);
-    }
-    chain.awaitingClientRedirectTimer = setTimeout(() => {
-      const stillWaitingChain = chainsById.get(chainId);
-      if (!stillWaitingChain) {
-        return;
-      }
-      stillWaitingChain.awaitingClientRedirect = false;
-      stillWaitingChain.awaitingClientRedirectTimer = null;
-      if (stillWaitingChain.pendingFinalDetails) {
-        scheduleChainFinalization(stillWaitingChain);
-      } else {
-        cleanupChain(stillWaitingChain);
-      }
-    }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
-
-    const fromUrl = lastUrl || chain.events.at(-1)?.to || chain.initialUrl;
-    chain.events.push({
-      timestamp: formatTimestamp(details.timeStamp),
-      from: fromUrl,
-      to: details.url,
-      statusCode: 'JS',
-      method: 'CLIENT',
-      type: 'client_redirect'
-    });
-
-    pendingClientRedirects.set(details.tabId, {
-      chainId: chain.id,
-      targetUrl: details.url
-    });
-
-    startCleanupTimer(chain);
-  });
-} else {
-  console.warn(
-    'Redirect Inspector: chrome.webNavigation.onCommitted is unavailable in this context; client-side redirects will not be tracked.'
-  );
-}
+  // если прилетело что-то другое — всё равно отвечаем,
+  // чтобы не было "Receiving end does not exist"
+  sendResponse({ ok: false, error: 'Unknown message type' });
+  return false;
+});
