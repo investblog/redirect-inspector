@@ -189,9 +189,17 @@ function isLikelyBrowserUrl(url) {
 }
 
 function resolveFinalUrl(record, completionDetails) {
-  const candidates = [];
   const completionType = completionDetails?.type;
   const completionUrl = completionDetails?.url;
+
+  if (typeof record.tabId === 'number' && record.tabId >= 0) {
+    const committedUrl = tabLastCommittedUrl.get(record.tabId);
+    if (committedUrl) {
+      return committedUrl;
+    }
+  }
+
+  const candidates = [];
 
   const isNavigationCompletion = completionType === 'main_frame' || completionType === 'sub_frame';
 
