@@ -393,69 +393,88 @@ chrome.webRequest.onErrorOccurred.addListener(
   ['extraHeaders']
 );
 
-chrome.webNavigation.onCommitted.addListener((details) => {
-  if (typeof details.tabId !== 'number' || details.tabId < 0) {
-    return;
-  }
+const webNavigation =
+  typeof chrome !== 'undefined' &&
+  chrome &&
+  typeof chrome.webNavigation === 'object' &&
+  chrome.webNavigation
+    ? chrome.webNavigation
+    : undefined;
 
-  const lastUrl = tabLastCommittedUrl.get(details.tabId);
-  tabLastCommittedUrl.set(details.tabId, details.url);
+const webNavigationOnCommitted =
+  webNavigation &&
+  typeof webNavigation.onCommitted === 'object' &&
+  webNavigation.onCommitted
+    ? webNavigation.onCommitted
+    : undefined;
 
-  const chainId = tabChains.get(details.tabId);
-  if (!chainId) {
-    return;
-  }
-
-  const chain = chainsById.get(chainId);
-  if (!chain) {
-    tabChains.delete(details.tabId);
-    return;
-  }
-
-  if (!Array.isArray(details.transitionQualifiers) || !details.transitionQualifiers.includes('client_redirect')) {
-    return;
-  }
-
-  if (chain.finalizeTimer) {
-    clearTimeout(chain.finalizeTimer);
-    chain.finalizeTimer = null;
-  }
-
-  chain.awaitingClientRedirect = true;
-  if (chain.awaitingClientRedirectTimer) {
-    clearTimeout(chain.awaitingClientRedirectTimer);
-  }
-  chain.awaitingClientRedirectTimer = setTimeout(() => {
-    const stillWaitingChain = chainsById.get(chainId);
-    if (!stillWaitingChain) {
+if (webNavigationOnCommitted && typeof webNavigationOnCommitted.addListener === 'function') {
+  webNavigationOnCommitted.addListener((details) => {
+    if (typeof details.tabId !== 'number' || details.tabId < 0) {
       return;
     }
-    stillWaitingChain.awaitingClientRedirect = false;
-    stillWaitingChain.awaitingClientRedirectTimer = null;
-    if (stillWaitingChain.pendingFinalDetails) {
-      scheduleChainFinalization(stillWaitingChain);
-    } else {
-      cleanupChain(stillWaitingChain);
+
+    const lastUrl = tabLastCommittedUrl.get(details.tabId);
+    tabLastCommittedUrl.set(details.tabId, details.url);
+
+    const chainId = tabChains.get(details.tabId);
+    if (!chainId) {
+      return;
     }
-  }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
 
-  const fromUrl = lastUrl || chain.events.at(-1)?.to || chain.initialUrl;
-  chain.events.push({
-    timestamp: formatTimestamp(details.timeStamp),
-    from: fromUrl,
-    to: details.url,
-    statusCode: 'JS',
-    method: 'CLIENT',
-    type: 'client_redirect'
+    const chain = chainsById.get(chainId);
+    if (!chain) {
+      tabChains.delete(details.tabId);
+      return;
+    }
+
+    if (!Array.isArray(details.transitionQualifiers) || !details.transitionQualifiers.includes('client_redirect')) {
+      return;
+    }
+
+    if (chain.finalizeTimer) {
+      clearTimeout(chain.finalizeTimer);
+      chain.finalizeTimer = null;
+    }
+
+    chain.awaitingClientRedirect = true;
+    if (chain.awaitingClientRedirectTimer) {
+      clearTimeout(chain.awaitingClientRedirectTimer);
+    }
+    chain.awaitingClientRedirectTimer = setTimeout(() => {
+      const stillWaitingChain = chainsById.get(chainId);
+      if (!stillWaitingChain) {
+        return;
+      }
+      stillWaitingChain.awaitingClientRedirect = false;
+      stillWaitingChain.awaitingClientRedirectTimer = null;
+      if (stillWaitingChain.pendingFinalDetails) {
+        scheduleChainFinalization(stillWaitingChain);
+      } else {
+        cleanupChain(stillWaitingChain);
+      }
+    }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
+
+    const fromUrl = lastUrl || chain.events.at(-1)?.to || chain.initialUrl;
+    chain.events.push({
+      timestamp: formatTimestamp(details.timeStamp),
+      from: fromUrl,
+      to: details.url,
+      statusCode: 'JS',
+      method: 'CLIENT',
+      type: 'client_redirect'
+    });
+
+    pendingClientRedirects.set(details.tabId, {
+      chainId: chain.id,
+      targetUrl: details.url
+    });
+
+    startCleanupTimer(chain);
   });
-
-  pendingClientRedirects.set(details.tabId, {
-    chainId: chain.id,
-    targetUrl: details.url
-  });
-
-  startCleanupTimer(chain);
-});
+} else {
+  console.warn('Redirect Inspector: chrome.webNavigation API is unavailable; client-side redirects will not be tracked.');
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'redirect-inspector:get-log') {
