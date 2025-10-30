@@ -14,6 +14,9 @@ const tabChains = new Map();
 const tabLastCommittedUrl = new Map();
 const pendingClientRedirects = new Map();
 
+const WEB_REQUEST_FILTER = { urls: ['<all_urls>'] };
+const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
+
 function getHeaderValue(headers = [], headerName) {
   if (!Array.isArray(headers) || !headerName) {
     return undefined;
@@ -334,6 +337,79 @@ async function finalizeChain(details, errorMessage) {
   };
 
   scheduleChainFinalization(chain);
+}
+
+function handleBeforeRedirect(details) {
+  try {
+    recordRedirectEvent(details);
+  } catch (error) {
+    console.error('Failed to record redirect event', error, details);
+  }
+}
+
+function handleRequestCompleted(details) {
+  try {
+    finalizeChain(details);
+  } catch (error) {
+    console.error('Failed to finalize redirect chain', error, details);
+  }
+}
+
+function handleRequestError(details) {
+  try {
+    const message = details?.error || 'Unknown network error';
+    finalizeChain(details, message);
+  } catch (error) {
+    console.error('Failed to finalize redirect chain after error', error, details);
+  }
+}
+
+function cleanupTabState(tabId) {
+  tabLastCommittedUrl.delete(tabId);
+  pendingClientRedirects.delete(tabId);
+
+  const chainId = tabChains.get(tabId);
+  if (!chainId) {
+    return;
+  }
+
+  const chain = chainsById.get(chainId);
+  if (chain) {
+    cleanupChain(chain);
+  } else {
+    tabChains.delete(tabId);
+  }
+}
+
+// ---- EVENT REGISTRATION ----
+try {
+  if (chrome?.webRequest?.onBeforeRedirect) {
+    chrome.webRequest.onBeforeRedirect.addListener(handleBeforeRedirect, WEB_REQUEST_FILTER, WEB_REQUEST_EXTRA_INFO_SPEC);
+  }
+
+  if (chrome?.webRequest?.onCompleted) {
+    chrome.webRequest.onCompleted.addListener(handleRequestCompleted, WEB_REQUEST_FILTER, WEB_REQUEST_EXTRA_INFO_SPEC);
+  }
+
+  if (chrome?.webRequest?.onErrorOccurred) {
+    chrome.webRequest.onErrorOccurred.addListener(handleRequestError, WEB_REQUEST_FILTER);
+  }
+} catch (error) {
+  console.error('Failed to register webRequest listeners', error);
+}
+
+if (chrome?.webNavigation?.onCommitted) {
+  chrome.webNavigation.onCommitted.addListener((details) => {
+    if (typeof details.tabId === 'number' && details.tabId >= 0) {
+      tabLastCommittedUrl.set(details.tabId, details.url);
+    }
+  });
+}
+
+if (chrome?.tabs?.onRemoved) {
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    cleanupTabState(tabId);
+  });
 }
 
 // ---- RUNTIME MESSAGES (popup <-> background) ----
