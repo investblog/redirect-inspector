@@ -36,19 +36,40 @@ function showStatus(message, type = 'info') {
   statusEl.hidden = !message;
 }
 
+// ---- шум и служебные ----
+function countNoiseEvents(records) {
+  if (!Array.isArray(records)) return 0;
+  let total = 0;
+  for (const r of records) {
+    if (Array.isArray(r?.events)) {
+      total += r.events.filter((e) => e.noise).length;
+    }
+  }
+  return total;
+}
+
 function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
   if (!noiseSummaryEl) {
     return;
   }
 
+  const totalNoise = countNoiseEvents(allRedirectRecords);
   const hiddenCount = totalRecords - visibleRecords;
-  if (showingNoise || hiddenCount <= 0) {
+
+  if (showingNoise || (hiddenCount <= 0 && totalNoise === 0)) {
     noiseSummaryEl.hidden = true;
     noiseSummaryEl.textContent = '';
     return;
   }
 
   noiseSummaryEl.hidden = false;
+
+  if (totalNoise > 0) {
+    noiseSummaryEl.textContent =
+      totalNoise === 1 ? '1 service/analytics request hidden' : `${totalNoise} service/analytics requests hidden`;
+    return;
+  }
+
   noiseSummaryEl.textContent =
     hiddenCount === 1 ? '1 likely tracking request hidden' : `${hiddenCount} likely tracking requests hidden`;
 }
@@ -78,7 +99,10 @@ function updateStatusForRecords({ total, visible, hidden, showingNoise }) {
   }
 
   if (!showingNoise && visible === 0 && hidden > 0) {
-    showStatus('Only tracking pixel requests were captured. Enable "Show pixel & analytics requests" to inspect them.', 'info');
+    showStatus(
+      'Only tracking pixel requests were captured. Enable "Show pixel & analytics requests" to inspect them.',
+      'info'
+    );
     return;
   }
 
@@ -153,6 +177,7 @@ function describeHops(count) {
   return `${count} hops`;
 }
 
+// ---- экспорт ----
 function formatRedirectChainForExport(record) {
   const events = normalizeEvents(record);
   const lines = ['Redirect chain:'];
@@ -168,7 +193,12 @@ function formatRedirectChainForExport(record) {
   }
 
   const finalUrl = record?.finalUrl || events.at(-1)?.to || record?.initialUrl;
-  if (finalUrl) {
+
+  // если цепочка целиком служебная — final URL не пишем
+  const allEventsNoisy =
+    Array.isArray(events) && events.length > 0 && events.every((e) => e.noise === true);
+
+  if (finalUrl && !allEventsNoisy) {
     lines.push('', `Final URL: ${formatUrl(finalUrl)}`);
   }
 
@@ -211,6 +241,7 @@ async function copyRedirectChain(record, triggerButton) {
   }
 }
 
+// ---- шаги ----
 function renderRedirectStep(step) {
   const item = document.createElement('li');
   item.className = 'redirect-step';
@@ -273,13 +304,53 @@ function normalizeEvents(record) {
   return [];
 }
 
+// ---- рендер секции служебных ----
+function renderNoiseSection(record, containerEl) {
+  const events = normalizeEvents(record);
+  const noisy = events.filter((e) => e.noise);
+
+  if (!noisy.length) {
+    return;
+  }
+
+  const block = document.createElement('div');
+  block.className = 'redirect-item__noise';
+
+  const title = document.createElement('div');
+  title.className = 'redirect-item__noise-title';
+  title.textContent = 'Service / analytics requests:';
+  block.appendChild(title);
+
+  noisy.forEach((e) => {
+    const row = document.createElement('div');
+    row.className = 'redirect-item__noise-row';
+
+    const label =
+      e.noiseReason === 'cloudflare-challenge'
+        ? 'Cloudflare challenge JS'
+        : e.noiseReason === 'analytics'
+        ? 'Analytics'
+        : 'Service';
+
+    const shortUrl = e.to || e.from || '';
+    const displayUrl = shortUrl.length > 140 ? shortUrl.slice(0, 140) + '…' : shortUrl;
+
+    row.textContent = `${label}: ${displayUrl}`;
+    row.title = shortUrl;
+
+    block.appendChild(row);
+  });
+
+  containerEl.appendChild(block);
+}
+
 function renderRedirectItem(record) {
   const clone = template.content.cloneNode(true);
 
   const titleEl = clone.querySelector('.redirect-item__title');
   const events = normalizeEvents(record);
   const finalUrl = record.finalUrl || events.at(-1)?.to || record.initialUrl;
-  titleEl.textContent = formatUrl(finalUrl);
+  titleEl.textContent = formatUrl(finalUrl || record.initialUrl || 'Unknown URL');
   if (finalUrl) {
     titleEl.title = finalUrl;
   }
@@ -319,6 +390,10 @@ function renderRedirectItem(record) {
   events.forEach((step) => {
     stepsEl.appendChild(renderRedirectStep(step));
   });
+
+  // добавляем служебные запросы под основным списком
+  const rootEl = clone.querySelector('.redirect-item');
+  renderNoiseSection(record, rootEl);
 
   const copyButton = clone.querySelector('.redirect-item__copy');
   if (copyButton) {

@@ -200,14 +200,16 @@ button:hover {
   gap: 0.5rem;
 }
 
+/* шаги теперь флексом, чтобы не было пустых колонок */
 .redirect-step {
-  display: grid;
-  grid-template-columns: auto auto 1fr auto 1fr;
-  align-items: start;
+  display: flex;
+  align-items: center;
   gap: 0.35rem;
   font-size: 0.8rem;
+  flex-wrap: nowrap;
 }
 
+/* статус фиксированный, как был */
 .redirect-step__status {
   min-width: 2.5rem;
   padding: 0.15rem 0.4rem;
@@ -218,15 +220,27 @@ button:hover {
   font-weight: 600;
 }
 
+/* метод показываем, если он есть, без жёсткого min-width */
 .redirect-step__method {
   font-weight: 600;
   color: #1f2937;
-  min-width: 2.5rem;
+  font-size: 0.7rem;
+  line-height: 1;
 }
 
-.redirect-step__method--empty {
-  visibility: hidden;
+/* стрелка — просто иконка */
+.redirect-step__arrow {
+  color: #6b7280;
+  flex: 0 0 auto;
 }
+
+/* URL тянутся и обрезаются */
+.redirect-step__url {
+  min-width: 0;
+  word-break: break-all;
+  flex: 1 1 auto;
+}
+
 
 .redirect-step__url {
   word-break: break-all;

@@ -33,6 +33,72 @@ const BADGE_COUNTDOWN_TICK_MS = 1000;
 const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
 const LIKELY_BROWSER_PROTOCOLS = new Set(['http:', 'https:']);
 
+// NEW: шумные паттерны и хосты — сюда пойдут CF / analytics
+const NOISY_URL_PATTERNS = [
+  '/cdn-cgi/challenge-platform/',
+  '/cdn-cgi/challenge/',
+  '/cdn-cgi/bm/',
+  '/cdn-cgi/trace',
+  '/cdn-cgi/zaraz/',
+  '/cdn-cgi/scripts/',
+];
+
+const NOISY_HOST_SUFFIXES = [
+  'googletagmanager.com',
+  'google-analytics.com',
+  'stats.g.doubleclick.net',
+  'connect.facebook.net',
+  'facebook.com',
+  'tiktok.com',
+  'analytics.yahoo.com',
+  'radar.cedexis.com',
+
+];
+
+// NEW: определяем, что урл служебный/аналитический/CF
+function isNoisyUrl(url) {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    if (NOISY_URL_PATTERNS.some((p) => u.pathname.includes(p))) {
+      return true;
+    }
+    if (
+      NOISY_HOST_SUFFIXES.some(
+        (host) => u.hostname === host || u.hostname.endsWith('.' + host)
+      )
+    ) {
+      return true;
+    }
+  } catch (e) {
+    // ignore parse error
+  }
+  return false;
+}
+
+// NEW: пометить событие (hop) как noise
+function classifyEventLikeHop(event) {
+  const e = { ...event };
+  e.noise = false;
+  e.noiseReason = null;
+
+  if (e.to && isNoisyUrl(e.to)) {
+    e.noise = true;
+    if (e.to.includes('/cdn-cgi/')) {
+      e.noiseReason = 'cloudflare-challenge';
+    } else {
+      e.noiseReason = 'analytics';
+    }
+  }
+
+  return e;
+}
+
+// NEW: финальный кандидат не должен быть шумным
+function isNoisyFinalCandidate(url) {
+  return isNoisyUrl(url);
+}
+
 function getHeaderValue(headers = [], headerName) {
   if (!Array.isArray(headers) || !headerName) {
     return undefined;
@@ -266,7 +332,11 @@ function resolveFinalUrl(record, completionDetails) {
   if (Array.isArray(record.events) && record.events.length > 0) {
     const navigationalEvent = [...record.events]
       .reverse()
-      .find((event) => event?.to && (event.type === 'client-redirect' || event.type === 'main_frame' || event.method === 'CLIENT'));
+      .find(
+        (event) =>
+          event?.to &&
+          (event.type === 'client-redirect' || event.type === 'main_frame' || event.method === 'CLIENT')
+      );
 
     if (navigationalEvent?.to) {
       candidates.push(navigationalEvent.to);
@@ -295,9 +365,18 @@ function resolveFinalUrl(record, completionDetails) {
 
   const uniqueCandidates = candidates.filter((candidate, index) => candidate && candidates.indexOf(candidate) === index);
 
-  const preferred = uniqueCandidates.find((candidate) => isLikelyBrowserUrl(candidate));
+  // NEW: сначала берём нормальный браузерный и НЕ шумный
+  const preferred = uniqueCandidates.find(
+    (candidate) => isLikelyBrowserUrl(candidate) && !isNoisyFinalCandidate(candidate)
+  );
   if (preferred) {
     return preferred;
+  }
+
+  // затем просто нормальный браузерный
+  const fallbackBrowser = uniqueCandidates.find((candidate) => isLikelyBrowserUrl(candidate));
+  if (fallbackBrowser) {
+    return fallbackBrowser;
   }
 
   if (uniqueCandidates.length > 0) {
@@ -341,6 +420,11 @@ function classifyRecord(record, completionDetails = {}) {
 
   if (hasTrackingKeyword(finalUrl)) {
     heuristics.push('tracking keyword in URL');
+  }
+
+  // NEW: если финал шумный (CF / analytics) — считаем это весомым признаком
+  if (isNoisyUrl(finalUrl)) {
+    heuristics.push('noisy url (cf/analytics)');
   }
 
   if (completionDetails.type === 'image') {
@@ -647,7 +731,10 @@ async function finalizeChainRecord(chainId) {
       statusCode: event.statusCode,
       method: event.method,
       ip: event.ip,
-      type: event.type
+      type: event.type,
+      // NEW: сохраняем флаги шума
+      noise: event.noise === true,
+      noiseReason: event.noiseReason || undefined
     }));
   const record = {
     id: chain.id,
@@ -679,9 +766,19 @@ async function finalizeChainRecord(chainId) {
 
   chain.pendingFinalDetails = null;
 
-  await appendRedirectRecord(record);
-  updateBadgeForRecord(record);
+  // если все события служебные/аналитические — не засоряем лог
+  const allEventsNoisy =
+    Array.isArray(record.events) &&
+    record.events.length > 0 &&
+    record.events.every((e) => e.noise === true);
+
+  if (!allEventsNoisy) {
+    await appendRedirectRecord(record);
+    updateBadgeForRecord(record);
+  }
+
   cleanupChain(chain);
+
 }
 
 function attachRequestToChain(chain, details) {
@@ -732,7 +829,8 @@ function recordRedirectEvent(details) {
     chain.pendingRedirectTargetKeys.add(key);
   }
 
-  chain.events.push({
+  // NEW: создаём сырое событие и классифицируем
+  const rawEvent = {
     timestamp: formatTimestamp(details.timeStamp),
     timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
     from: details.url,
@@ -741,7 +839,11 @@ function recordRedirectEvent(details) {
     method: details.method,
     ip: details.ip,
     type: details.type
-  });
+  };
+
+  const classifiedEvent = classifyEventLikeHop(rawEvent);
+
+  chain.events.push(classifiedEvent);
 
   updateBadgeForChain(chain);
 }
@@ -845,7 +947,9 @@ function handleBeforeRequest(details) {
             candidate.events.at(-1)?.to ||
             tabLastCommittedUrl.get(details.tabId) ||
             candidate.initialUrl;
-          candidate.events.push({
+
+          // NEW: клиентский хоп тоже классифицируем
+          const rawClientEvent = {
             timestamp: formatTimestamp(details.timeStamp),
             timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
             from: fromUrl,
@@ -853,7 +957,10 @@ function handleBeforeRequest(details) {
             statusCode: 'JS',
             method: 'CLIENT',
             type: 'client-redirect'
-          });
+          };
+          const classifiedClientEvent = classifyEventLikeHop(rawClientEvent);
+
+          candidate.events.push(classifiedClientEvent);
 
           candidate.pendingFinalDetails = null;
           cancelAwaitingClientRedirect(candidate);
