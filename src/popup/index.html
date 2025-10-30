@@ -10,6 +10,13 @@
       <h1>Redirect Inspector</h1>
       <button id="clear-log" type="button">Clear</button>
     </header>
+    <section class="controls">
+      <label class="controls__toggle">
+        <input id="show-noise" type="checkbox" />
+        <span>Show pixel &amp; analytics requests</span>
+      </label>
+      <span id="noise-summary" class="controls__summary" hidden></span>
+    </section>
     <section id="status" hidden></section>
     <section id="redirect-list" class="redirect-list"></section>
     <template id="redirect-item-template">

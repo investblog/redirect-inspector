@@ -19,6 +19,37 @@ header {
   margin-bottom: 0.75rem;
 }
 
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.controls__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #1f2933;
+}
+
+.controls__toggle input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2563eb;
+}
+
+.controls__summary {
+  font-size: 0.75rem;
+  color: #92400e;
+  font-weight: 600;
+  margin-left: auto;
+  text-align: right;
+}
+
 h1 {
   font-size: 1.1rem;
   margin: 0;
@@ -97,6 +128,17 @@ button:hover {
   gap: 0.5rem;
   font-size: 0.75rem;
   color: #4b5563;
+}
+
+.redirect-item__badge {
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .redirect-item__initiator {
