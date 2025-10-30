@@ -9,7 +9,7 @@ const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // Clean up stale chains after 5 
 const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 10 * 1000;
 const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 45 * 1000;
 const CLIENT_REDIRECT_EXTENDED_TYPES = new Set(['script', 'xmlhttprequest', 'other']);
-const CHAIN_FINALIZATION_DELAY_MS = 2 * 1000;
+const CHAIN_FINALIZATION_DELAY_MS = 0;
 
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
@@ -28,7 +28,10 @@ const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
 
 const BADGE_MAX_COUNT = 99;
 const BADGE_COLOR = '#2563eb';
+const BADGE_COUNTDOWN_COLOR = '#dc2626';
+const BADGE_COUNTDOWN_TICK_MS = 1000;
 const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
+const LIKELY_BROWSER_PROTOCOLS = new Set(['http:', 'https:']);
 
 function getHeaderValue(headers = [], headerName) {
   if (!Array.isArray(headers) || !headerName) {
@@ -93,7 +96,7 @@ function handleChromePromise(promise, context) {
   });
 }
 
-function setBadgeForTab(tabId, hopCount) {
+function setBadgeForTab(tabId, hopCount, options = {}) {
   if (!chrome?.action?.setBadgeText) {
     return;
   }
@@ -102,7 +105,7 @@ function setBadgeForTab(tabId, hopCount) {
     return;
   }
 
-  const text = formatBadgeText(hopCount);
+  const text = typeof options.text === 'string' ? options.text : formatBadgeText(hopCount);
   try {
     const result = chrome.action.setBadgeText({ tabId, text });
     handleChromePromise(result, 'Failed to set badge text');
@@ -115,7 +118,8 @@ function setBadgeForTab(tabId, hopCount) {
 
   if (text && chrome?.action?.setBadgeBackgroundColor) {
     try {
-      const result = chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
+      const color = options.color || BADGE_COLOR;
+      const result = chrome.action.setBadgeBackgroundColor({ tabId, color });
       handleChromePromise(result, 'Failed to set badge background color');
     } catch (error) {
       if (!error?.message || !error.message.includes('No tab with id')) {
@@ -156,8 +160,63 @@ function updateBadgeForChain(chain) {
     return;
   }
 
+  if (chain.awaitingClientRedirect && chain.awaitingClientRedirectDeadline) {
+    renderAwaitingBadge(chain);
+    return;
+  }
+
   const hopCount = Array.isArray(chain.events) ? chain.events.length : 0;
   setBadgeForTab(chain.tabId, hopCount);
+}
+
+function renderAwaitingBadge(chain, options = {}) {
+  if (!chain) {
+    return;
+  }
+
+  if (options.toggle) {
+    chain.awaitingBadgeToggle = !chain.awaitingBadgeToggle;
+  }
+
+  const hopCount = Array.isArray(chain.events) ? chain.events.length : 0;
+
+  if (typeof chain.tabId !== 'number' || chain.tabId < 0) {
+    return;
+  }
+
+  const deadline = typeof chain.awaitingClientRedirectDeadline === 'number' ? chain.awaitingClientRedirectDeadline : null;
+  if (!deadline) {
+    setBadgeForTab(chain.tabId, hopCount);
+    return;
+  }
+
+  const remainingMs = deadline - Date.now();
+  if (remainingMs <= 0) {
+    setBadgeForTab(chain.tabId, hopCount);
+    return;
+  }
+
+  if (chain.awaitingBadgeToggle) {
+    const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+    setBadgeForTab(chain.tabId, hopCount, { text: String(remainingSeconds), color: BADGE_COUNTDOWN_COLOR });
+    return;
+  }
+
+  setBadgeForTab(chain.tabId, hopCount);
+}
+
+function stopAwaitingClientRedirectCountdown(chain) {
+  if (!chain) {
+    return;
+  }
+
+  if (chain.awaitingClientRedirectInterval) {
+    clearInterval(chain.awaitingClientRedirectInterval);
+    chain.awaitingClientRedirectInterval = null;
+  }
+
+  chain.awaitingClientRedirectDeadline = null;
+  chain.awaitingBadgeToggle = false;
 }
 
 function updateBadgeForRecord(record) {
@@ -177,6 +236,10 @@ function isLikelyBrowserUrl(url) {
   try {
     const parsed = new URL(url);
     const pathname = (parsed.pathname || '').toLowerCase();
+
+    if (!LIKELY_BROWSER_PROTOCOLS.has(parsed.protocol)) {
+      return false;
+    }
 
     if (NON_NAVIGABLE_EXTENSIONS.some((extension) => pathname.endsWith(extension))) {
       return false;
@@ -335,6 +398,9 @@ function createChain(details) {
     finalizeTimer: null,
     awaitingClientRedirect: false,
     awaitingClientRedirectTimer: null,
+    awaitingClientRedirectDeadline: null,
+    awaitingClientRedirectInterval: null,
+    awaitingBadgeToggle: false,
     cleanupTimer: null,
     pendingRedirectTargetKeys: new Set()
   };
@@ -362,12 +428,16 @@ function cancelAwaitingClientRedirect(chain) {
     chain.awaitingClientRedirectTimer = null;
   }
 
+  stopAwaitingClientRedirectCountdown(chain);
+
   if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
     const pending = pendingClientRedirects.get(chain.tabId);
     if (pending?.chainId === chain.id) {
       pendingClientRedirects.delete(chain.tabId);
     }
   }
+
+  updateBadgeForChain(chain);
 }
 
 function getClientRedirectAwaitTimeout(details) {
@@ -391,7 +461,9 @@ function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
 
   chain.awaitingClientRedirect = true;
 
-  if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
+  const hasBadgeTarget = typeof chain.tabId === 'number' && chain.tabId >= 0;
+
+  if (hasBadgeTarget) {
     pendingClientRedirects.set(chain.tabId, {
       chainId: chain.id,
       fromUrl: fromUrl || chain.pendingFinalDetails?.details?.url,
@@ -400,17 +472,40 @@ function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
   }
 
   const waitMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : CLIENT_REDIRECT_DEFAULT_AWAIT_MS;
+  chain.awaitingClientRedirectDeadline = Date.now() + waitMs;
+  chain.awaitingBadgeToggle = true;
+  renderAwaitingBadge(chain);
+
+  if (chain.awaitingClientRedirectInterval) {
+    clearInterval(chain.awaitingClientRedirectInterval);
+    chain.awaitingClientRedirectInterval = null;
+  }
+
+  if (hasBadgeTarget) {
+    chain.awaitingClientRedirectInterval = setInterval(() => {
+      if (!chain.awaitingClientRedirect) {
+        clearInterval(chain.awaitingClientRedirectInterval);
+        chain.awaitingClientRedirectInterval = null;
+        return;
+      }
+
+      renderAwaitingBadge(chain, { toggle: true });
+    }, BADGE_COUNTDOWN_TICK_MS);
+  }
+
   chain.awaitingClientRedirectTimer = setTimeout(() => {
     chain.awaitingClientRedirect = false;
     chain.awaitingClientRedirectTimer = null;
 
-    if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
+    if (hasBadgeTarget) {
       const pending = pendingClientRedirects.get(chain.tabId);
       if (pending?.chainId === chain.id) {
         pendingClientRedirects.delete(chain.tabId);
       }
     }
 
+    stopAwaitingClientRedirectCountdown(chain);
+    updateBadgeForChain(chain);
     scheduleChainFinalization(chain);
   }, waitMs);
 }
@@ -443,6 +538,9 @@ function cleanupChain(chain) {
     clearTimeout(chain.awaitingClientRedirectTimer);
     chain.awaitingClientRedirectTimer = null;
   }
+
+  chain.awaitingClientRedirect = false;
+  stopAwaitingClientRedirectCountdown(chain);
 
   if (chain.cleanupTimer) {
     clearTimeout(chain.cleanupTimer);
@@ -493,13 +591,23 @@ function scheduleChainFinalization(chain) {
 
   if (chain.finalizeTimer) {
     clearTimeout(chain.finalizeTimer);
+    chain.finalizeTimer = null;
   }
 
-  chain.finalizeTimer = setTimeout(() => {
+  const delay = Math.max(CHAIN_FINALIZATION_DELAY_MS, 0);
+  if (delay === 0) {
     finalizeChainRecord(chain.id).catch((error) => {
       console.error('Failed to persist redirect chain', error);
     });
-  }, CHAIN_FINALIZATION_DELAY_MS);
+    return;
+  }
+
+  chain.finalizeTimer = setTimeout(() => {
+    chain.finalizeTimer = null;
+    finalizeChainRecord(chain.id).catch((error) => {
+      console.error('Failed to persist redirect chain', error);
+    });
+  }, delay);
 }
 
 async function finalizeChainRecord(chainId) {
@@ -830,6 +938,19 @@ if (chrome?.webNavigation?.onCommitted) {
   chrome.webNavigation.onCommitted.addListener((details) => {
     if (typeof details.tabId === 'number' && details.tabId >= 0) {
       tabLastCommittedUrl.set(details.tabId, details.url);
+
+      if (details.frameId === 0) {
+        const pending = pendingClientRedirects.get(details.tabId);
+        if (pending) {
+          const pendingChain = chainsById.get(pending.chainId);
+          if (pendingChain && pendingChain.awaitingClientRedirect && pendingChain.pendingFinalDetails) {
+            cancelAwaitingClientRedirect(pendingChain);
+            scheduleChainFinalization(pendingChain);
+          } else {
+            pendingClientRedirects.delete(details.tabId);
+          }
+        }
+      }
 
       const activeChainId = tabChains.get(details.tabId);
       if (activeChainId) {
