@@ -164,7 +164,12 @@ function renderRedirectStep(step) {
 
   const methodEl = document.createElement('span');
   methodEl.className = 'redirect-step__method';
-  methodEl.textContent = step.method || 'GET';
+  const method = typeof step.method === 'string' ? step.method.toUpperCase() : '';
+  if (method && method !== 'GET') {
+    methodEl.textContent = method;
+  } else {
+    methodEl.classList.add('redirect-step__method--empty');
+  }
   if (step.type) {
     methodEl.title = step.type;
   }
@@ -264,6 +269,20 @@ function renderRedirectItem(record) {
     footerEl.hidden = false;
   } else if (record.finalStatus) {
     footerEl.textContent = `Completed with status ${record.finalStatus}`;
+
+    const statusCode = Number(record.finalStatus);
+    if (Number.isFinite(statusCode)) {
+      if (statusCode >= 200 && statusCode < 300) {
+        footerEl.dataset.type = 'success';
+      } else if (statusCode >= 400) {
+        footerEl.dataset.type = 'error';
+      } else {
+        footerEl.dataset.type = 'warning';
+      }
+    } else {
+      delete footerEl.dataset.type;
+    }
+
     footerEl.hidden = false;
   } else {
     footerEl.remove();
