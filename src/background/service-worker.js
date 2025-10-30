@@ -393,8 +393,23 @@ chrome.webRequest.onErrorOccurred.addListener(
   ['extraHeaders']
 );
 
-if (chrome?.webNavigation?.onCommitted?.addListener) {
-  chrome.webNavigation.onCommitted.addListener((details) => {
+const webNavigation =
+  typeof chrome !== 'undefined' &&
+  chrome &&
+  typeof chrome.webNavigation === 'object' &&
+  chrome.webNavigation
+    ? chrome.webNavigation
+    : undefined;
+
+const webNavigationOnCommitted =
+  webNavigation &&
+  typeof webNavigation.onCommitted === 'object' &&
+  webNavigation.onCommitted
+    ? webNavigation.onCommitted
+    : undefined;
+
+if (webNavigationOnCommitted && typeof webNavigationOnCommitted.addListener === 'function') {
+  webNavigationOnCommitted.addListener((details) => {
     if (typeof details.tabId !== 'number' || details.tabId < 0) {
       return;
     }
