@@ -1,0 +1,9 @@
+# Node and tooling artifacts
+node_modules/
+.DS_Store
+/dist
+.env
+
+# Python virtual environments
+.venv/
+__pycache__/

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirect Inspector</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Redirect Inspector</h1>
+      <button id="clear-log" type="button">Clear</button>
+    </header>
+    <section id="status" hidden></section>
+    <section id="redirect-list" class="redirect-list"></section>
+    <template id="redirect-item-template">
+      <article class="redirect-item">
+        <header class="redirect-item__header">
+          <h2 class="redirect-item__title"></h2>
+          <div class="redirect-item__meta">
+            <span class="redirect-item__timestamp"></span>
+            <span class="redirect-item__tab"></span>
+            <span class="redirect-item__hops"></span>
+          </div>
+        </header>
+        <ol class="redirect-item__steps"></ol>
+        <footer class="redirect-item__footer" hidden></footer>
+      </article>
+    </template>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Redirect Inspector",
+  "description": "Inspect and record redirect chains directly from your browser.",
+  "version": "0.1.0",
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "webRequest",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Redirect Inspector"
+  }
+}

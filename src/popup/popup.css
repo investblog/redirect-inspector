@@ -1,0 +1,153 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  padding: 0.75rem;
+  min-width: 340px;
+  background-color: #f5f5f5;
+  color: #1f2933;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+button {
+  cursor: pointer;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+#status {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.35rem;
+  font-size: 0.85rem;
+}
+
+#status[data-type='info'] {
+  background: #e0f2fe;
+  color: #0c4a6e;
+}
+
+#status[data-type='error'] {
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+#status[data-type='success'] {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.redirect-list {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-bottom: 0.25rem;
+}
+
+.redirect-item {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.redirect-item__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.redirect-item__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+  word-break: break-all;
+}
+
+.redirect-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.redirect-item__initiator {
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+.redirect-item__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.redirect-step {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto 1fr;
+  align-items: start;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.redirect-step__status {
+  min-width: 2.5rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.35rem;
+  background: #ede9fe;
+  color: #5b21b6;
+  text-align: center;
+  font-weight: 600;
+}
+
+.redirect-step__method {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.redirect-step__url {
+  word-break: break-all;
+}
+
+.redirect-step__arrow {
+  color: #6b7280;
+}
+
+.redirect-item__footer {
+  font-size: 0.75rem;
+  color: #374151;
+}
+
+.redirect-item__footer[data-type='error'] {
+  color: #991b1b;
+}
