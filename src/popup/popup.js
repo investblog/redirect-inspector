@@ -141,7 +141,10 @@ function renderRedirectStep(step) {
 
   const methodEl = document.createElement('span');
   methodEl.className = 'redirect-step__method';
-  methodEl.textContent = step.type ? `${step.method || 'GET'} (${step.type})` : step.method || 'GET';
+  methodEl.textContent = step.method || 'GET';
+  if (step.type) {
+    methodEl.title = step.type;
+  }
   item.appendChild(methodEl);
 
   const fromEl = document.createElement('span');
