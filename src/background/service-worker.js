@@ -212,6 +212,9 @@ async function finalizeChain(details, errorMessage) {
 
 chrome.webRequest.onBeforeRedirect.addListener(
   (details) => {
+    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
+      return;
+    }
     recordRedirectEvent(details);
   },
   { urls: ['<all_urls>'] }
@@ -219,19 +222,26 @@ chrome.webRequest.onBeforeRedirect.addListener(
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
+    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
+      return;
+    }
     await finalizeChain(details);
   },
   { urls: ['<all_urls>'] },
-  ['responseHeaders', 'extraHeaders']
+  ['extraHeaders']
 );
 
 chrome.webRequest.onErrorOccurred.addListener(
   async (details) => {
+    if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
+      return;
+    }
     await finalizeChain(details, details.error);
   },
   { urls: ['<all_urls>'] },
-  ['responseHeaders', 'extraHeaders']
+  ['extraHeaders']
 );
+
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'redirect-inspector:get-log') {
