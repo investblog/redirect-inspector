@@ -8,6 +8,8 @@ const CLIENT_REDIRECT_GRACE_PERIOD_MS = 1500;
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
 
+const CLIENT_REDIRECT_AWAIT_TYPES = new Set(['main_frame', 'sub_frame', 'script', 'xmlhttprequest', 'other']);
+
 const chainsById = new Map();
 const requestToChain = new Map();
 const tabChains = new Map();
@@ -220,6 +222,45 @@ function cancelAwaitingClientRedirect(chain) {
     clearTimeout(chain.awaitingClientRedirectTimer);
     chain.awaitingClientRedirectTimer = null;
   }
+
+  if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
+    const pending = pendingClientRedirects.get(chain.tabId);
+    if (pending?.chainId === chain.id) {
+      pendingClientRedirects.delete(chain.tabId);
+    }
+  }
+}
+
+function startAwaitingClientRedirect(chain, fromUrl) {
+  if (!chain) {
+    return;
+  }
+
+  cancelAwaitingClientRedirect(chain);
+
+  chain.awaitingClientRedirect = true;
+
+  if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
+    pendingClientRedirects.set(chain.tabId, {
+      chainId: chain.id,
+      fromUrl: fromUrl || chain.pendingFinalDetails?.details?.url,
+      startedAt: Date.now()
+    });
+  }
+
+  chain.awaitingClientRedirectTimer = setTimeout(() => {
+    chain.awaitingClientRedirect = false;
+    chain.awaitingClientRedirectTimer = null;
+
+    if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
+      const pending = pendingClientRedirects.get(chain.tabId);
+      if (pending?.chainId === chain.id) {
+        pendingClientRedirects.delete(chain.tabId);
+      }
+    }
+
+    scheduleChainFinalization(chain);
+  }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
 }
 
 function startCleanupTimer(chain) {
@@ -432,7 +473,16 @@ async function finalizeChain(details, errorMessage) {
     errorMessage: errorMessage || null
   };
 
-  scheduleChainFinalization(chain);
+  const canAwaitClientRedirect =
+    typeof details.tabId === 'number' &&
+    details.tabId >= 0 &&
+    (!details.type || CLIENT_REDIRECT_AWAIT_TYPES.has(details.type));
+
+  if (canAwaitClientRedirect) {
+    startAwaitingClientRedirect(chain, details.url);
+  } else {
+    scheduleChainFinalization(chain);
+  }
 }
 
 function createRedirectTargetKey(tabId, url) {
@@ -489,6 +539,36 @@ function handleBeforeRequest(details) {
 
     if (!chain) {
       chain = consumePendingRedirectTarget(details);
+    }
+
+    if (!chain && typeof details.tabId === 'number' && details.tabId >= 0 && details.type === 'main_frame') {
+      const pending = pendingClientRedirects.get(details.tabId);
+      if (pending) {
+        const candidate = chainsById.get(pending.chainId);
+        if (candidate) {
+          chain = candidate;
+
+          const fromUrl =
+            pending.fromUrl ||
+            candidate.pendingFinalDetails?.details?.url ||
+            candidate.events.at(-1)?.to ||
+            tabLastCommittedUrl.get(details.tabId) ||
+            candidate.initialUrl;
+          candidate.events.push({
+            timestamp: formatTimestamp(details.timeStamp),
+            from: fromUrl,
+            to: details.url,
+            statusCode: 'JS',
+            method: 'CLIENT',
+            type: 'client-redirect'
+          });
+
+          candidate.pendingFinalDetails = null;
+          cancelAwaitingClientRedirect(candidate);
+        } else {
+          pendingClientRedirects.delete(details.tabId);
+        }
+      }
     }
 
     if (!chain) {
