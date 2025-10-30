@@ -223,7 +223,7 @@ function renderRedirectStep(step) {
   const methodEl = document.createElement('span');
   methodEl.className = 'redirect-step__method';
   const method = typeof step.method === 'string' ? step.method.toUpperCase() : '';
-  if (method && method !== 'GET') {
+  if (method && method !== 'GET' && method !== 'CLIENT') {
     methodEl.textContent = method;
   } else {
     methodEl.classList.add('redirect-step__method--empty');
