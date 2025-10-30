@@ -1,3 +1,5 @@
+// src/background/service-worker.js
+
 const REDIRECT_LOG_KEY = 'redirectLog';
 const MAX_RECORDS = 50;
 const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // Clean up stale chains after 5 minutes.
@@ -334,6 +336,9 @@ async function finalizeChain(details, errorMessage) {
   scheduleChainFinalization(chain);
 }
 
+// ---- LISTENERS ----
+
+// связать новый запрос с ожидаемым JS-редиректом
 chrome.webRequest.onBeforeRequest.addListener(
   (details) => {
     if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
@@ -361,6 +366,7 @@ chrome.webRequest.onBeforeRequest.addListener(
   { urls: ['<all_urls>'] }
 );
 
+// HTTP-редиректы
 chrome.webRequest.onBeforeRedirect.addListener(
   (details) => {
     if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
@@ -371,6 +377,7 @@ chrome.webRequest.onBeforeRedirect.addListener(
   { urls: ['<all_urls>'] }
 );
 
+// запрос успешно завершился
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
     if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
@@ -379,9 +386,12 @@ chrome.webRequest.onCompleted.addListener(
     await finalizeChain(details);
   },
   { urls: ['<all_urls>'] },
+  // ВАЖНО: в MV3 нельзя передавать и responseHeaders, и extraHeaders.
+  // Нам нужны заголовки → оставляем только extraHeaders.
   ['extraHeaders']
 );
 
+// запрос завершился ошибкой
 chrome.webRequest.onErrorOccurred.addListener(
   async (details) => {
     if (details.type !== 'main_frame' && details.type !== 'sub_frame') {
@@ -393,10 +403,9 @@ chrome.webRequest.onErrorOccurred.addListener(
   ['extraHeaders']
 );
 
-const webNavigationOnCommitted = chrome?.webNavigation?.onCommitted;
-
-if (typeof webNavigationOnCommitted?.addListener === 'function') {
-  webNavigationOnCommitted.addListener((details) => {
+// ---- CLIENT-SIDE (JS) REDIRECT TRACKING ----
+if (chrome.webNavigation && typeof chrome.webNavigation.onCommitted === 'object' && typeof chrome.webNavigation.onCommitted.addListener === 'function') {
+  chrome.webNavigation.onCommitted.addListener((details) => {
     if (typeof details.tabId !== 'number' || details.tabId < 0) {
       return;
     }
@@ -415,10 +424,12 @@ if (typeof webNavigationOnCommitted?.addListener === 'function') {
       return;
     }
 
+    // интересует только переход, помеченный как client_redirect
     if (!Array.isArray(details.transitionQualifiers) || !details.transitionQualifiers.includes('client_redirect')) {
       return;
     }
 
+    // Переход был из JS → ждём новый запрос
     if (chain.finalizeTimer) {
       clearTimeout(chain.finalizeTimer);
       chain.finalizeTimer = null;
@@ -460,31 +471,7 @@ if (typeof webNavigationOnCommitted?.addListener === 'function') {
     startCleanupTimer(chain);
   });
 } else {
-  console.warn('Redirect Inspector: chrome.webNavigation API is unavailable; client-side redirects will not be tracked.');
+  console.warn(
+    'Redirect Inspector: chrome.webNavigation.onCommitted is unavailable in this context; client-side redirects will not be tracked.'
+  );
 }
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === 'redirect-inspector:get-log') {
-    chrome.storage.local
-      .get({ [REDIRECT_LOG_KEY]: [] })
-      .then((result) => sendResponse({ log: result[REDIRECT_LOG_KEY] }))
-      .catch((error) => {
-        console.error('Failed to read redirect log', error);
-        sendResponse({ log: [], error: error?.message || 'Unknown error' });
-      });
-    return true;
-  }
-
-  if (message?.type === 'redirect-inspector:clear-log') {
-    chrome.storage.local
-      .set({ [REDIRECT_LOG_KEY]: [] })
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => {
-        console.error('Failed to clear redirect log', error);
-        sendResponse({ success: false, error: error?.message || 'Unknown error' });
-      });
-    return true;
-  }
-
-  return undefined;
-});
