@@ -7,7 +7,8 @@
 body {
   margin: 0;
   padding: 0.75rem;
-  min-width: 340px;
+  min-width: 420px; /* было 340px */
+  max-width: 640px; /* на будущее */
   background-color: #f5f5f5;
   color: #1f2933;
 }
@@ -16,6 +17,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
@@ -94,7 +96,7 @@ button:hover {
 .redirect-list {
   display: grid;
   gap: 0.75rem;
-  max-height: 420px;
+  max-height: 500px; /* было 420px */
   overflow-y: auto;
   padding-bottom: 0.25rem;
 }
@@ -102,10 +104,16 @@ button:hover {
 .redirect-item {
   background: #fff;
   border-radius: 0.75rem;
-  padding: 0.85rem;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  padding: 1rem; /* было 0.85rem */
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08);
   display: grid;
   gap: 0.75rem;
+  transition: box-shadow 0.12s ease-in-out, transform 0.12s ease-in-out;
+}
+
+.redirect-item:hover {
+  box-shadow: 0 2px 9px rgba(15, 23, 42, 0.13);
+  transform: translateY(-1px);
 }
 
 .redirect-item__header {
@@ -200,16 +208,16 @@ button:hover {
   gap: 0.5rem;
 }
 
-/* шаги теперь флексом, чтобы не было пустых колонок */
+/* шаги флексом, чтобы не было пустых колонок */
 .redirect-step {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   flex-wrap: nowrap;
 }
 
-/* статус фиксированный, как был */
+/* статус фиксированный */
 .redirect-step__status {
   min-width: 2.5rem;
   padding: 0.15rem 0.4rem;
@@ -220,7 +228,7 @@ button:hover {
   font-weight: 600;
 }
 
-/* метод показываем, если он есть, без жёсткого min-width */
+/* метод показываем, если он есть */
 .redirect-step__method {
   font-weight: 600;
   color: #1f2937;
@@ -239,15 +247,6 @@ button:hover {
   min-width: 0;
   word-break: break-all;
   flex: 1 1 auto;
-}
-
-
-.redirect-step__url {
-  word-break: break-all;
-}
-
-.redirect-step__arrow {
-  color: #6b7280;
 }
 
 .redirect-item__footer {

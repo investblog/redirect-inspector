@@ -2,14 +2,15 @@
 
 const REDIRECT_LOG_KEY = 'redirectLog';
 const MAX_RECORDS = 50;
-const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // Clean up stale chains after 5 minutes.
-// Cloudflare challenge pages and other script-driven redirects may take several seconds
-// before issuing the follow-up navigation. Allow more time for script/XHR initiated hops
-// before finalizing a chain, but avoid delaying regular navigations unnecessarily.
+const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут на "живую" цепочку
+
+// ожидание клиентских редиректов
 const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 10 * 1000;
 const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 45 * 1000;
 const CLIENT_REDIRECT_EXTENDED_TYPES = new Set(['script', 'xmlhttprequest', 'other']);
-const CHAIN_FINALIZATION_DELAY_MS = 0;
+
+// ВАЖНО: ставим небольшую задержку, чтобы "безтабный → таб" не рвался
+const CHAIN_FINALIZATION_DELAY_MS = 250;
 
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
@@ -30,10 +31,11 @@ const BADGE_MAX_COUNT = 99;
 const BADGE_COLOR = '#2563eb';
 const BADGE_COUNTDOWN_COLOR = '#dc2626';
 const BADGE_COUNTDOWN_TICK_MS = 1000;
+
 const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
 const LIKELY_BROWSER_PROTOCOLS = new Set(['http:', 'https:']);
 
-// NEW: шумные паттерны и хосты — сюда пойдут CF / analytics
+// --- шумные типы (CF / analytics / beacons) ---
 const NOISY_URL_PATTERNS = [
   '/cdn-cgi/challenge-platform/',
   '/cdn-cgi/challenge/',
@@ -52,10 +54,10 @@ const NOISY_HOST_SUFFIXES = [
   'tiktok.com',
   'analytics.yahoo.com',
   'radar.cedexis.com',
-
 ];
 
-// NEW: определяем, что урл служебный/аналитический/CF
+// ----------------- helpers -----------------
+
 function isNoisyUrl(url) {
   if (!url) return false;
   try {
@@ -76,7 +78,7 @@ function isNoisyUrl(url) {
   return false;
 }
 
-// NEW: пометить событие (hop) как noise
+// помечаем hop
 function classifyEventLikeHop(event) {
   const e = { ...event };
   e.noise = false;
@@ -94,7 +96,6 @@ function classifyEventLikeHop(event) {
   return e;
 }
 
-// NEW: финальный кандидат не должен быть шумным
 function isNoisyFinalCandidate(url) {
   return isNoisyUrl(url);
 }
@@ -365,7 +366,7 @@ function resolveFinalUrl(record, completionDetails) {
 
   const uniqueCandidates = candidates.filter((candidate, index) => candidate && candidates.indexOf(candidate) === index);
 
-  // NEW: сначала берём нормальный браузерный и НЕ шумный
+  // 1) нормальный браузерный и не шумный
   const preferred = uniqueCandidates.find(
     (candidate) => isLikelyBrowserUrl(candidate) && !isNoisyFinalCandidate(candidate)
   );
@@ -373,12 +374,13 @@ function resolveFinalUrl(record, completionDetails) {
     return preferred;
   }
 
-  // затем просто нормальный браузерный
+  // 2) нормальный браузерный
   const fallbackBrowser = uniqueCandidates.find((candidate) => isLikelyBrowserUrl(candidate));
   if (fallbackBrowser) {
     return fallbackBrowser;
   }
 
+  // 3) просто первый
   if (uniqueCandidates.length > 0) {
     return uniqueCandidates[0];
   }
@@ -422,7 +424,6 @@ function classifyRecord(record, completionDetails = {}) {
     heuristics.push('tracking keyword in URL');
   }
 
-  // NEW: если финал шумный (CF / analytics) — считаем это весомым признаком
   if (isNoisyUrl(finalUrl)) {
     heuristics.push('noisy url (cf/analytics)');
   }
@@ -468,6 +469,8 @@ async function appendRedirectRecord(record) {
     console.error('Failed to append redirect record', error);
   }
 }
+
+// --------- chain lifecycle ---------
 
 function createChain(details) {
   const chain = {
@@ -631,10 +634,12 @@ function cleanupChain(chain) {
     chain.cleanupTimer = null;
   }
 
+  // чистим все ключи, под которые мы подписывались
   if (chain.pendingRedirectTargetKeys?.size) {
     for (const key of chain.pendingRedirectTargetKeys) {
       const queue = pendingRedirectTargets.get(key);
       if (!queue) {
+        pendingRedirectTargets.delete(key);
         continue;
       }
 
@@ -649,10 +654,12 @@ function cleanupChain(chain) {
     chain.pendingRedirectTargetKeys.clear();
   }
 
+  // чистим маппинг requestId → chain
   for (const requestId of chain.requestIds) {
     requestToChain.delete(requestId);
   }
 
+  // чистим табы
   if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
     const current = tabChains.get(chain.tabId);
     if (current === chain.id) {
@@ -708,7 +715,9 @@ async function finalizeChainRecord(chainId) {
 
   const { details, errorMessage } = completion;
   const completedAt = formatTimestamp(details.timeStamp);
-  const sortedEvents = chain.events
+
+  // 1. сортируем как есть
+  const sortedEventsRaw = chain.events
     .slice()
     .sort((a, b) => {
       const timeA = typeof a.timestampMs === 'number' ? a.timestampMs : Number.POSITIVE_INFINITY;
@@ -716,10 +725,51 @@ async function finalizeChainRecord(chainId) {
       if (timeA === timeB) {
         return 0;
       }
-
       return timeA - timeB;
-    })
-    .map((event) => ({
+    });
+
+  // 2. делим на шумные и нормальные
+  const noisyEvents = sortedEventsRaw.filter((e) => e?.noise === true);
+  const nonNoisyEvents = sortedEventsRaw.filter((e) => !e?.noise);
+
+  // 3. основной список — только нормальные, если они есть
+  const eventsForRecord = nonNoisyEvents.length > 0 ? nonNoisyEvents : sortedEventsRaw;
+
+  // 4. нормализуем
+  const normalizedEvents = eventsForRecord.map((event) => ({
+    timestamp:
+      typeof event.timestampMs === 'number'
+        ? formatTimestamp(event.timestampMs)
+        : typeof event.timestamp === 'string'
+        ? event.timestamp
+        : formatTimestamp(),
+    from: event.from,
+    to: event.to,
+    statusCode: event.statusCode,
+    method: event.method,
+    ip: event.ip,
+    type: event.type,
+    noise: event.noise === true,
+    noiseReason: event.noiseReason || undefined
+  }));
+
+  const record = {
+    id: chain.id,
+    requestId: details.requestId,
+    tabId: chain.tabId,
+    initiator: chain.initiator,
+    initiatedAt: chain.initiatedAt,
+    completedAt,
+    initialUrl: chain.initialUrl || normalizedEvents[0]?.from,
+    finalUrl: undefined,
+    finalStatus: details.statusCode,
+    error: errorMessage || null,
+    events: normalizedEvents
+  };
+
+  // 5. отдаём шум отдельно
+  if (noisyEvents.length > 0) {
+    record.noiseEvents = noisyEvents.map((event) => ({
       timestamp:
         typeof event.timestampMs === 'number'
           ? formatTimestamp(event.timestampMs)
@@ -732,26 +782,15 @@ async function finalizeChainRecord(chainId) {
       method: event.method,
       ip: event.ip,
       type: event.type,
-      // NEW: сохраняем флаги шума
-      noise: event.noise === true,
+      noise: true,
       noiseReason: event.noiseReason || undefined
     }));
-  const record = {
-    id: chain.id,
-    requestId: details.requestId,
-    tabId: chain.tabId,
-    initiator: chain.initiator,
-    initiatedAt: chain.initiatedAt,
-    completedAt,
-    initialUrl: chain.initialUrl || sortedEvents[0]?.from,
-    finalUrl: undefined,
-    finalStatus: details.statusCode,
-    error: errorMessage || null,
-    events: sortedEvents
-  };
+  }
 
+  // 6. финальный URL по очищенному списку
   record.finalUrl = resolveFinalUrl(record, details);
 
+  // 7. классификация
   const classification = classifyRecord(record, details);
   record.classification = classification.classification;
   if (classification.classificationReason) {
@@ -766,7 +805,7 @@ async function finalizeChainRecord(chainId) {
 
   chain.pendingFinalDetails = null;
 
-  // если все события служебные/аналитические — не засоряем лог
+  // 8. если в итоге всё равно всё шумное — не пишем
   const allEventsNoisy =
     Array.isArray(record.events) &&
     record.events.length > 0 &&
@@ -777,9 +816,11 @@ async function finalizeChainRecord(chainId) {
     updateBadgeForRecord(record);
   }
 
+  // 9. чистим
   cleanupChain(chain);
-
 }
+
+// --------- attach / record / consume ---------
 
 function attachRequestToChain(chain, details) {
   if (!chain || !details) {
@@ -822,14 +863,28 @@ function recordRedirectEvent(details) {
   }
 
   if (details.redirectUrl) {
-    const key = createRedirectTargetKey(details.tabId, details.redirectUrl);
-    const queue = pendingRedirectTargets.get(key) || [];
-    queue.push(chain.id);
-    pendingRedirectTargets.set(key, queue);
-    chain.pendingRedirectTargetKeys.add(key);
+    const keys = createRedirectTargetKey(details.tabId, details.redirectUrl);
+    if (keys) {
+      const { tabKey, anyKey } = keys;
+
+      // точный ключ всегда
+      if (tabKey) {
+        const q1 = pendingRedirectTargets.get(tabKey) || [];
+        q1.push(chain.id);
+        pendingRedirectTargets.set(tabKey, q1);
+        chain.pendingRedirectTargetKeys.add(tabKey);
+      }
+
+      // если исходный запрос был без таба — даём универсальный
+      if (!(typeof details.tabId === 'number' && details.tabId >= 0)) {
+        const q2 = pendingRedirectTargets.get(anyKey) || [];
+        q2.push(chain.id);
+        pendingRedirectTargets.set(anyKey, q2);
+        chain.pendingRedirectTargetKeys.add(anyKey);
+      }
+    }
   }
 
-  // NEW: создаём сырое событие и классифицируем
   const rawEvent = {
     timestamp: formatTimestamp(details.timeStamp),
     timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
@@ -858,6 +913,16 @@ async function finalizeChain(details, errorMessage) {
     return;
   }
 
+  // 👇 главное: если мы уже ждём JS, не даём пикселю перезаписать финал
+  if (
+    chain.awaitingClientRedirect &&
+    details &&
+    details.type &&
+    details.type !== 'main_frame'
+  ) {
+    return;
+  }
+
   startCleanupTimer(chain);
 
   chain.pendingFinalDetails = {
@@ -870,28 +935,36 @@ async function finalizeChain(details, errorMessage) {
     details.tabId >= 0 &&
     (!details.type || CLIENT_REDIRECT_AWAIT_TYPES.has(details.type));
 
-  if (canAwaitClientRedirect) {
-    const awaitTimeout = getClientRedirectAwaitTimeout(details);
+  // проверяем, может ли страница инициировать JS-редирект
+  const contentType = getHeaderValue(details.responseHeaders, 'content-type') || '';
+  const isHtmlPage =
+    typeof contentType === 'string' &&
+    contentType.toLowerCase().includes('text/html') &&
+    details.statusCode === 200 &&
+    (details.type === 'main_frame' || details.type === 'sub_frame');
+
+  if (canAwaitClientRedirect || isHtmlPage) {
+    const awaitTimeout = isHtmlPage ? 15 * 1000 : getClientRedirectAwaitTimeout(details);
     startAwaitingClientRedirect(chain, details.url, awaitTimeout);
   } else {
     scheduleChainFinalization(chain);
   }
 }
 
+// ВАЖНО: теперь возвращаем ДВА ключа (точный и общий)
 function createRedirectTargetKey(tabId, url) {
   if (!url) {
     return null;
   }
 
-  const normalizedTabId = typeof tabId === 'number' && tabId >= 0 ? tabId : 'no-tab';
-  return `${normalizedTabId}::${url}`;
+  const hasTab = typeof tabId === 'number' && tabId >= 0;
+  const tabKey = `${hasTab ? tabId : 'no-tab'}::${url}`;
+  const anyKey = `any-tab::${url}`;
+  return { tabKey, anyKey };
 }
 
-function consumePendingRedirectTarget(details) {
-  const key = createRedirectTargetKey(details.tabId, details.url);
-  if (!key) {
-    return null;
-  }
+function consumeQueueByKey(key) {
+  if (!key) return null;
 
   const queue = pendingRedirectTargets.get(key);
   if (!Array.isArray(queue) || queue.length === 0) {
@@ -918,6 +991,27 @@ function consumePendingRedirectTarget(details) {
   return chain;
 }
 
+function consumePendingRedirectTarget(details) {
+  const keys = createRedirectTargetKey(details.tabId, details.url);
+  if (!keys) {
+    return null;
+  }
+
+  const { tabKey, anyKey } = keys;
+
+  // 1. пробуем по точному табу
+  let chain = consumeQueueByKey(tabKey);
+  if (chain) {
+    return chain;
+  }
+
+  // 2. пробуем общий
+  chain = consumeQueueByKey(anyKey);
+  return chain || null;
+}
+
+// --------- webRequest handlers ---------
+
 function handleBeforeRedirect(details) {
   try {
     recordRedirectEvent(details);
@@ -934,6 +1028,7 @@ function handleBeforeRequest(details) {
       chain = consumePendingRedirectTarget(details);
     }
 
+    // клиентский редирект (JS) → создаём хоп вручную
     if (!chain && typeof details.tabId === 'number' && details.tabId >= 0 && details.type === 'main_frame') {
       const pending = pendingClientRedirects.get(details.tabId);
       if (pending) {
@@ -948,7 +1043,6 @@ function handleBeforeRequest(details) {
             tabLastCommittedUrl.get(details.tabId) ||
             candidate.initialUrl;
 
-          // NEW: клиентский хоп тоже классифицируем
           const rawClientEvent = {
             timestamp: formatTimestamp(details.timeStamp),
             timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
@@ -1043,33 +1137,83 @@ try {
 
 if (chrome?.webNavigation?.onCommitted) {
   chrome.webNavigation.onCommitted.addListener((details) => {
-    if (typeof details.tabId === 'number' && details.tabId >= 0) {
-      tabLastCommittedUrl.set(details.tabId, details.url);
-
-      if (details.frameId === 0) {
-        const pending = pendingClientRedirects.get(details.tabId);
-        if (pending) {
-          const pendingChain = chainsById.get(pending.chainId);
-          if (pendingChain && pendingChain.awaitingClientRedirect && pendingChain.pendingFinalDetails) {
-            cancelAwaitingClientRedirect(pendingChain);
-            scheduleChainFinalization(pendingChain);
-          } else {
-            pendingClientRedirects.delete(details.tabId);
-          }
-        }
-      }
-
-      const activeChainId = tabChains.get(details.tabId);
-      if (activeChainId) {
-        const activeChain = chainsById.get(activeChainId);
-        if (activeChain) {
-          updateBadgeForChain(activeChain);
-          return;
-        }
-      }
-
-      setBadgeForTab(details.tabId, 0);
+    if (typeof details.tabId !== 'number' || details.tabId < 0) {
+      return;
     }
+
+    // запоминаем последний реально открытый URL в табе
+    tabLastCommittedUrl.set(details.tabId, details.url);
+
+    // это главный фрейм — тут и ловим JS/мета-редиректы
+    if (details.frameId === 0) {
+      const pending = pendingClientRedirects.get(details.tabId);
+      if (pending) {
+        const chain = chainsById.get(pending.chainId);
+        if (chain && chain.awaitingClientRedirect) {
+          // проверка на "откат" на тот же урл
+          const lastNonNoisy = [...chain.events].reverse().find((e) => !e.noise && e.to);
+          const lastTarget = lastNonNoisy?.to || chain.events.at(-1)?.to;
+
+          let isBackwardHop = false;
+          if (lastTarget && details.url) {
+            try {
+              const a = new URL(lastTarget);
+              const b = new URL(details.url);
+              isBackwardHop = a.hostname === b.hostname && a.pathname === b.pathname;
+            } catch {}
+          }
+
+          if (!isBackwardHop) {
+            const clientHop = classifyEventLikeHop({
+              timestamp: formatTimestamp(details.timeStamp),
+              timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
+              from: pending.fromUrl ||
+                chain.pendingFinalDetails?.details?.url ||
+                chain.events.at(-1)?.to ||
+                chain.initialUrl,
+              to: details.url,
+              statusCode: 'JS',
+              method: 'CLIENT',
+              type: 'client-redirect'
+            });
+
+            chain.events.push(clientHop);
+          }
+
+          // мы получили реальный финал → можем завершать
+          cancelAwaitingClientRedirect(chain);
+          chain.pendingFinalDetails = {
+            details: {
+              requestId: chain.id, // фиктивный requestId, нам уже не важен
+              tabId: details.tabId,
+              url: details.url,
+              type: 'main_frame',
+              statusCode: 200,
+              timeStamp: details.timeStamp || Date.now(),
+              responseHeaders: []
+            },
+            errorMessage: null
+          };
+          scheduleChainFinalization(chain);
+        }
+
+        // в любом случае этот pending нам больше не нужен
+        pendingClientRedirects.delete(details.tabId);
+      }
+    }
+
+    // обновляем бейдж по активной цепочке, если есть
+    const activeChainId = tabChains.get(details.tabId);
+    if (activeChainId) {
+      const activeChain = chainsById.get(activeChainId);
+      if (activeChain) {
+        updateBadgeForChain(activeChain);
+        return;
+      }
+    }
+
+    // если цепочки нет — просто очистим бейдж
+    setBadgeForTab(details.tabId, 0);
   });
 }
 
@@ -1081,10 +1225,8 @@ if (chrome?.tabs?.onRemoved) {
 
 // ---- RUNTIME MESSAGES (popup <-> background) ----
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // всегда стараемся отвечать, чтобы не было "Receiving end does not exist"
   const type = message && message.type;
 
-  // 1. отдать лог
   if (type === 'redirect-inspector:get-log') {
     chrome.storage.local
       .get({ [REDIRECT_LOG_KEY]: [] })
@@ -1096,12 +1238,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ log: [], error: error?.message || 'Unknown error' });
       });
 
-    // говорим Chrome, что ответ будет асинхронно
     return true;
   }
 
-  // 2. очистить лог (именно то, что сейчас шлёт попап)
-  if (type === 'redirect-inspector:clear-log') {
+  if (type === 'redirect-inspector:clear-log' || type === 'redirect-inspector:clear-redirects') {
     chrome.storage.local
       .set({ [REDIRECT_LOG_KEY]: [] })
       .then(() => {
@@ -1116,24 +1256,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // 3. на всякий случай поддержим старое/альтернативное имя
-  if (type === 'redirect-inspector:clear-redirects') {
-    chrome.storage.local
-      .set({ [REDIRECT_LOG_KEY]: [] })
-      .then(() => {
-        clearAllBadges();
-        sendResponse({ success: true });
-      })
-      .catch((error) => {
-        console.error('Failed to clear redirect log', error);
-        sendResponse({ success: false, error: error?.message || 'Unknown error' });
-      });
-
-    return true;
-  }
-
-  // если прилетело что-то другое — всё равно отвечаем,
-  // чтобы не было "Receiving end does not exist"
   sendResponse({ ok: false, error: 'Unknown message type' });
   return false;
 });
