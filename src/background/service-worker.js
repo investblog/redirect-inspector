@@ -3,9 +3,13 @@
 const REDIRECT_LOG_KEY = 'redirectLog';
 const MAX_RECORDS = 50;
 const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // Clean up stale chains after 5 minutes.
-// Cloudflare challenge pages and other script-driven redirects may take a few seconds
-// before issuing the follow-up navigation. Give them more time before finalizing a chain.
-const CLIENT_REDIRECT_GRACE_PERIOD_MS = 10 * 1000;
+// Cloudflare challenge pages and other script-driven redirects may take several seconds
+// before issuing the follow-up navigation. Allow more time for script/XHR initiated hops
+// before finalizing a chain, but avoid delaying regular navigations unnecessarily.
+const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 10 * 1000;
+const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 45 * 1000;
+const CLIENT_REDIRECT_EXTENDED_TYPES = new Set(['script', 'xmlhttprequest', 'other']);
+const CHAIN_FINALIZATION_DELAY_MS = 2 * 1000;
 
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
@@ -266,7 +270,19 @@ function cancelAwaitingClientRedirect(chain) {
   }
 }
 
-function startAwaitingClientRedirect(chain, fromUrl) {
+function getClientRedirectAwaitTimeout(details) {
+  if (!details?.type) {
+    return CLIENT_REDIRECT_DEFAULT_AWAIT_MS;
+  }
+
+  if (CLIENT_REDIRECT_EXTENDED_TYPES.has(details.type)) {
+    return CLIENT_REDIRECT_EXTENDED_AWAIT_MS;
+  }
+
+  return CLIENT_REDIRECT_DEFAULT_AWAIT_MS;
+}
+
+function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
   if (!chain) {
     return;
   }
@@ -283,6 +299,7 @@ function startAwaitingClientRedirect(chain, fromUrl) {
     });
   }
 
+  const waitMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : CLIENT_REDIRECT_DEFAULT_AWAIT_MS;
   chain.awaitingClientRedirectTimer = setTimeout(() => {
     chain.awaitingClientRedirect = false;
     chain.awaitingClientRedirectTimer = null;
@@ -295,7 +312,7 @@ function startAwaitingClientRedirect(chain, fromUrl) {
     }
 
     scheduleChainFinalization(chain);
-  }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
+  }, waitMs);
 }
 
 function startCleanupTimer(chain) {
@@ -382,7 +399,7 @@ function scheduleChainFinalization(chain) {
     finalizeChainRecord(chain.id).catch((error) => {
       console.error('Failed to persist redirect chain', error);
     });
-  }, CLIENT_REDIRECT_GRACE_PERIOD_MS);
+  }, CHAIN_FINALIZATION_DELAY_MS);
 }
 
 async function finalizeChainRecord(chainId) {
@@ -514,7 +531,8 @@ async function finalizeChain(details, errorMessage) {
     (!details.type || CLIENT_REDIRECT_AWAIT_TYPES.has(details.type));
 
   if (canAwaitClientRedirect) {
-    startAwaitingClientRedirect(chain, details.url);
+    const awaitTimeout = getClientRedirectAwaitTimeout(details);
+    startAwaitingClientRedirect(chain, details.url, awaitTimeout);
   } else {
     scheduleChainFinalization(chain);
   }
