@@ -3,7 +3,9 @@
 const REDIRECT_LOG_KEY = 'redirectLog';
 const MAX_RECORDS = 50;
 const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // Clean up stale chains after 5 minutes.
-const CLIENT_REDIRECT_GRACE_PERIOD_MS = 1500;
+// Cloudflare challenge pages and other script-driven redirects may take a few seconds
+// before issuing the follow-up navigation. Give them more time before finalizing a chain.
+const CLIENT_REDIRECT_GRACE_PERIOD_MS = 10 * 1000;
 
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
