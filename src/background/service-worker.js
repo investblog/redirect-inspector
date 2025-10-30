@@ -13,6 +13,7 @@ const requestToChain = new Map();
 const tabChains = new Map();
 const tabLastCommittedUrl = new Map();
 const pendingClientRedirects = new Map();
+const pendingRedirectTargets = new Map();
 
 const WEB_REQUEST_FILTER = { urls: ['<all_urls>'] };
 const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
@@ -126,7 +127,8 @@ function createChain(details) {
     finalizeTimer: null,
     awaitingClientRedirect: false,
     awaitingClientRedirectTimer: null,
-    cleanupTimer: null
+    cleanupTimer: null,
+    pendingRedirectTargetKeys: new Set()
   };
 
   chainsById.set(chain.id, chain);
@@ -185,6 +187,24 @@ function cleanupChain(chain) {
   if (chain.cleanupTimer) {
     clearTimeout(chain.cleanupTimer);
     chain.cleanupTimer = null;
+  }
+
+  if (chain.pendingRedirectTargetKeys?.size) {
+    for (const key of chain.pendingRedirectTargetKeys) {
+      const queue = pendingRedirectTargets.get(key);
+      if (!queue) {
+        continue;
+      }
+
+      const filtered = queue.filter((chainId) => chainId !== chain.id);
+      if (filtered.length === 0) {
+        pendingRedirectTargets.delete(key);
+      } else {
+        pendingRedirectTargets.set(key, filtered);
+      }
+    }
+
+    chain.pendingRedirectTargetKeys.clear();
   }
 
   for (const requestId of chain.requestIds) {
@@ -308,6 +328,14 @@ function recordRedirectEvent(details) {
     chain.initialUrl = details.url;
   }
 
+  if (details.redirectUrl) {
+    const key = createRedirectTargetKey(details.tabId, details.redirectUrl);
+    const queue = pendingRedirectTargets.get(key) || [];
+    queue.push(chain.id);
+    pendingRedirectTargets.set(key, queue);
+    chain.pendingRedirectTargetKeys.add(key);
+  }
+
   chain.events.push({
     timestamp: formatTimestamp(details.timeStamp),
     from: details.url,
@@ -339,11 +367,73 @@ async function finalizeChain(details, errorMessage) {
   scheduleChainFinalization(chain);
 }
 
+function createRedirectTargetKey(tabId, url) {
+  if (!url) {
+    return null;
+  }
+
+  const normalizedTabId = typeof tabId === 'number' && tabId >= 0 ? tabId : 'no-tab';
+  return `${normalizedTabId}::${url}`;
+}
+
+function consumePendingRedirectTarget(details) {
+  const key = createRedirectTargetKey(details.tabId, details.url);
+  if (!key) {
+    return null;
+  }
+
+  const queue = pendingRedirectTargets.get(key);
+  if (!Array.isArray(queue) || queue.length === 0) {
+    return null;
+  }
+
+  let chain = null;
+
+  while (queue.length > 0 && !chain) {
+    const chainId = queue.shift();
+    const candidate = chainsById.get(chainId);
+    if (candidate) {
+      candidate.pendingRedirectTargetKeys.delete(key);
+      chain = candidate;
+    }
+  }
+
+  if (queue.length > 0) {
+    pendingRedirectTargets.set(key, queue);
+  } else {
+    pendingRedirectTargets.delete(key);
+  }
+
+  return chain;
+}
+
 function handleBeforeRedirect(details) {
   try {
     recordRedirectEvent(details);
   } catch (error) {
     console.error('Failed to record redirect event', error, details);
+  }
+}
+
+function handleBeforeRequest(details) {
+  try {
+    let chain = getChainByRequestId(details.requestId);
+
+    if (!chain) {
+      chain = consumePendingRedirectTarget(details);
+    }
+
+    if (!chain) {
+      return;
+    }
+
+    attachRequestToChain(chain, details);
+
+    if (!chain.initialUrl) {
+      chain.initialUrl = details.url;
+    }
+  } catch (error) {
+    console.error('Failed to attach request to redirect chain', error, details);
   }
 }
 
@@ -383,6 +473,10 @@ function cleanupTabState(tabId) {
 
 // ---- EVENT REGISTRATION ----
 try {
+  if (chrome?.webRequest?.onBeforeRequest) {
+    chrome.webRequest.onBeforeRequest.addListener(handleBeforeRequest, WEB_REQUEST_FILTER);
+  }
+
   if (chrome?.webRequest?.onBeforeRedirect) {
     chrome.webRequest.onBeforeRedirect.addListener(handleBeforeRedirect, WEB_REQUEST_FILTER, WEB_REQUEST_EXTRA_INFO_SPEC);
   }
