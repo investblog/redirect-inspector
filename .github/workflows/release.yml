@@ -1,0 +1,42 @@
+name: Build & Release Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'     # сработает на v0.1.0, v1.0.0, v1.2.3
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # (опционально) можно проверить, что есть manifest.json
+      - name: Show repo tree
+        run: |
+          pwd
+          ls -R .
+
+      - name: Create zip package
+        run: |
+          mkdir -p dist
+          # в архив кладём всё, что нужно Chrome'у
+          zip -r dist/redirect-inspector.zip manifest.json src LICENSE README.md \
+            -x "**/.git*" "**/.github*"  # исключаем служебное
+
+      # Загружаем zip как артефакт (на всякий)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redirect-inspector
+          path: dist/redirect-inspector.zip
+
+      # Делаем релиз и прикрепляем zip
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/redirect-inspector.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
