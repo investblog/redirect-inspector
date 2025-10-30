@@ -192,13 +192,6 @@ function resolveFinalUrl(record, completionDetails) {
   const completionType = completionDetails?.type;
   const completionUrl = completionDetails?.url;
 
-  if (typeof record.tabId === 'number' && record.tabId >= 0) {
-    const committedUrl = tabLastCommittedUrl.get(record.tabId);
-    if (committedUrl) {
-      return committedUrl;
-    }
-  }
-
   const candidates = [];
 
   const isNavigationCompletion = completionType === 'main_frame' || completionType === 'sub_frame';
@@ -240,7 +233,30 @@ function resolveFinalUrl(record, completionDetails) {
   const uniqueCandidates = candidates.filter((candidate, index) => candidate && candidates.indexOf(candidate) === index);
 
   const preferred = uniqueCandidates.find((candidate) => isLikelyBrowserUrl(candidate));
-  return preferred || uniqueCandidates[0] || record.initialUrl || completionUrl || null;
+  if (preferred) {
+    return preferred;
+  }
+
+  if (uniqueCandidates.length > 0) {
+    return uniqueCandidates[0];
+  }
+
+  if (typeof record.tabId === 'number' && record.tabId >= 0) {
+    const committedUrl = tabLastCommittedUrl.get(record.tabId);
+    if (committedUrl) {
+      return committedUrl;
+    }
+  }
+
+  if (record.initialUrl) {
+    return record.initialUrl;
+  }
+
+  if (completionUrl) {
+    return completionUrl;
+  }
+
+  return null;
 }
 
 function classifyRecord(record, completionDetails = {}) {
