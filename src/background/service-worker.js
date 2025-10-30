@@ -68,6 +68,24 @@ function formatBadgeText(count) {
   return String(count);
 }
 
+function handleChromePromise(promise, context) {
+  if (!promise || typeof promise.catch !== 'function') {
+    return;
+  }
+
+  promise.catch((error) => {
+    if (error?.message && error.message.includes('No tab with id')) {
+      return;
+    }
+
+    if (context) {
+      console.error(context, error);
+    } else {
+      console.error('Chrome API call failed', error);
+    }
+  });
+}
+
 function setBadgeForTab(tabId, hopCount) {
   if (!chrome?.action?.setBadgeText) {
     return;
@@ -78,10 +96,25 @@ function setBadgeForTab(tabId, hopCount) {
   }
 
   const text = formatBadgeText(hopCount);
-  chrome.action.setBadgeText({ tabId, text });
+  try {
+    const result = chrome.action.setBadgeText({ tabId, text });
+    handleChromePromise(result, 'Failed to set badge text');
+  } catch (error) {
+    if (!error?.message || !error.message.includes('No tab with id')) {
+      console.error('Failed to set badge text', error);
+    }
+    return;
+  }
 
   if (text && chrome?.action?.setBadgeBackgroundColor) {
-    chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
+    try {
+      const result = chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
+      handleChromePromise(result, 'Failed to set badge background color');
+    } catch (error) {
+      if (!error?.message || !error.message.includes('No tab with id')) {
+        console.error('Failed to set badge background color', error);
+      }
+    }
   }
 }
 
