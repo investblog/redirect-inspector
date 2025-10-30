@@ -2,11 +2,97 @@ const statusEl = document.getElementById('status');
 const redirectListEl = document.getElementById('redirect-list');
 const template = document.getElementById('redirect-item-template');
 const clearButton = document.getElementById('clear-log');
+const showNoiseToggle = document.getElementById('show-noise');
+const noiseSummaryEl = document.getElementById('noise-summary');
+
+const SHOW_NOISE_STORAGE_KEY = 'redirectInspector:showNoiseRequests';
+let allRedirectRecords = [];
 
 function showStatus(message, type = 'info') {
   statusEl.textContent = message;
   statusEl.dataset.type = type;
   statusEl.hidden = !message;
+}
+
+function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
+  if (!noiseSummaryEl) {
+    return;
+  }
+
+  const hiddenCount = totalRecords - visibleRecords;
+  if (showingNoise || hiddenCount <= 0) {
+    noiseSummaryEl.hidden = true;
+    noiseSummaryEl.textContent = '';
+    return;
+  }
+
+  noiseSummaryEl.hidden = false;
+  noiseSummaryEl.textContent = hiddenCount === 1 ? '1 likely tracking request hidden' : `${hiddenCount} likely tracking requests hidden`;
+}
+
+function applyFilters(records) {
+  const safeRecords = Array.isArray(records) ? records : [];
+  const showingNoise = Boolean(showNoiseToggle?.checked);
+  const filtered = showingNoise
+    ? safeRecords
+    : safeRecords.filter((record) => record.classification !== 'likely-tracking');
+
+  renderRedirectLog(filtered);
+  updateNoiseSummary(safeRecords.length, filtered.length, showingNoise);
+
+  return {
+    total: safeRecords.length,
+    visible: filtered.length,
+    hidden: safeRecords.length - filtered.length,
+    showingNoise
+  };
+}
+
+function updateStatusForRecords({ total, visible, hidden, showingNoise }) {
+  if (total === 0) {
+    showStatus('No redirect chains captured yet. Navigate to a site that triggers a redirect.', 'info');
+    return;
+  }
+
+  if (!showingNoise && visible === 0 && hidden > 0) {
+    showStatus('Only tracking pixel requests were captured. Enable "Show pixel & analytics requests" to inspect them.', 'info');
+    return;
+  }
+
+  showStatus('');
+}
+
+async function loadNoisePreference() {
+  if (!showNoiseToggle) {
+    return false;
+  }
+
+  try {
+    const result = await chrome.storage.local.get({ [SHOW_NOISE_STORAGE_KEY]: false });
+    const showNoise = Boolean(result[SHOW_NOISE_STORAGE_KEY]);
+    showNoiseToggle.checked = showNoise;
+    return showNoise;
+  } catch (error) {
+    console.error('Failed to load pixel noise preference', error);
+    showNoiseToggle.checked = false;
+    return false;
+  }
+}
+
+async function handleShowNoiseChange() {
+  if (!showNoiseToggle) {
+    return;
+  }
+
+  const showNoise = showNoiseToggle.checked;
+  try {
+    await chrome.storage.local.set({ [SHOW_NOISE_STORAGE_KEY]: showNoise });
+  } catch (error) {
+    console.error('Failed to persist pixel noise preference', error);
+  }
+
+  const context = applyFilters(allRedirectRecords);
+  updateStatusForRecords(context);
 }
 
 function formatUrl(url) {
@@ -55,7 +141,7 @@ function renderRedirectStep(step) {
 
   const methodEl = document.createElement('span');
   methodEl.className = 'redirect-step__method';
-  methodEl.textContent = step.method || 'GET';
+  methodEl.textContent = step.type ? `${step.method || 'GET'} (${step.type})` : step.method || 'GET';
   item.appendChild(methodEl);
 
   const fromEl = document.createElement('span');
@@ -120,13 +206,24 @@ function renderRedirectItem(record) {
   const hopCount = events.length;
   hopsEl.textContent = describeHops(hopCount);
 
+  const metaEl = clone.querySelector('.redirect-item__meta');
+
   if (record.initiator) {
-    const metaEl = clone.querySelector('.redirect-item__meta');
     const initiatorEl = document.createElement('span');
     initiatorEl.className = 'redirect-item__initiator';
     initiatorEl.textContent = `Initiated by ${record.initiator}`;
     initiatorEl.title = record.initiator;
     metaEl.appendChild(initiatorEl);
+  }
+
+  if (record.classification === 'likely-tracking') {
+    const classificationEl = document.createElement('span');
+    classificationEl.className = 'redirect-item__badge';
+    classificationEl.textContent = 'Likely tracking pixel';
+    if (record.classificationReason) {
+      classificationEl.title = record.classificationReason;
+    }
+    metaEl.appendChild(classificationEl);
   }
 
   const stepsEl = clone.querySelector('.redirect-item__steps');
@@ -164,12 +261,9 @@ async function fetchRedirectLog() {
       throw new Error(response.error);
     }
     const log = response?.log ?? [];
-    renderRedirectLog(log);
-    if (log.length === 0) {
-      showStatus('No redirect chains captured yet. Navigate to a site that triggers a redirect.', 'info');
-    } else {
-      showStatus('');
-    }
+    allRedirectRecords = log;
+    const context = applyFilters(allRedirectRecords);
+    updateStatusForRecords(context);
   } catch (error) {
     console.error(error);
     showStatus(`Failed to load redirects: ${error.message}`, 'error');
@@ -183,7 +277,8 @@ async function clearRedirectLog() {
     if (!response?.success) {
       throw new Error(response?.error || 'Unknown error');
     }
-    renderRedirectLog([]);
+    allRedirectRecords = [];
+    applyFilters(allRedirectRecords);
     showStatus('Redirect log cleared.', 'success');
   } catch (error) {
     console.error(error);
@@ -193,4 +288,19 @@ async function clearRedirectLog() {
 
 clearButton.addEventListener('click', clearRedirectLog);
 
-document.addEventListener('DOMContentLoaded', fetchRedirectLog);
+if (showNoiseToggle) {
+  showNoiseToggle.addEventListener('change', handleShowNoiseChange);
+}
+
+async function initializePopup() {
+  await loadNoisePreference();
+  updateNoiseSummary(allRedirectRecords.length, allRedirectRecords.length, Boolean(showNoiseToggle?.checked));
+  await fetchRedirectLog();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initializePopup().catch((error) => {
+    console.error('Failed to initialize popup', error);
+    showStatus('Failed to initialize popup', 'error');
+  });
+});
