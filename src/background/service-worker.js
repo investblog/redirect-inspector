@@ -393,22 +393,9 @@ chrome.webRequest.onErrorOccurred.addListener(
   ['extraHeaders']
 );
 
-const webNavigation =
-  typeof chrome !== 'undefined' &&
-  chrome &&
-  typeof chrome.webNavigation === 'object' &&
-  chrome.webNavigation
-    ? chrome.webNavigation
-    : undefined;
+const webNavigationOnCommitted = chrome?.webNavigation?.onCommitted;
 
-const webNavigationOnCommitted =
-  webNavigation &&
-  typeof webNavigation.onCommitted === 'object' &&
-  webNavigation.onCommitted
-    ? webNavigation.onCommitted
-    : undefined;
-
-if (webNavigationOnCommitted && typeof webNavigationOnCommitted.addListener === 'function') {
+if (typeof webNavigationOnCommitted?.addListener === 'function') {
   webNavigationOnCommitted.addListener((details) => {
     if (typeof details.tabId !== 'number' || details.tabId < 0) {
       return;
