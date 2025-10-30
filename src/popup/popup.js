@@ -192,13 +192,17 @@ async function copyRedirectChain(record, triggerButton) {
     await navigator.clipboard.writeText(summary);
 
     if (triggerButton) {
-      const originalLabel = triggerButton.textContent;
-      triggerButton.textContent = 'Copied!';
+      const originalTitle = triggerButton.title;
+      triggerButton.title = 'Copied!';
+      triggerButton.setAttribute('aria-label', 'Copied!');
+      triggerButton.classList.add('redirect-item__copy--success');
       triggerButton.disabled = true;
 
       setTimeout(() => {
         triggerButton.disabled = false;
-        triggerButton.textContent = originalLabel;
+        triggerButton.title = originalTitle;
+        triggerButton.setAttribute('aria-label', originalTitle);
+        triggerButton.classList.remove('redirect-item__copy--success');
       }, 1600);
     }
   } catch (error) {
