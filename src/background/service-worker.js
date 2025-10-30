@@ -28,6 +28,7 @@ const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
 
 const BADGE_MAX_COUNT = 99;
 const BADGE_COLOR = '#2563eb';
+const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
 
 function getHeaderValue(headers = [], headerName) {
   if (!Array.isArray(headers) || !headerName) {
@@ -150,6 +151,15 @@ async function clearAllBadges() {
   }
 }
 
+function updateBadgeForChain(chain) {
+  if (!chain) {
+    return;
+  }
+
+  const hopCount = Array.isArray(chain.events) ? chain.events.length : 0;
+  setBadgeForTab(chain.tabId, hopCount);
+}
+
 function updateBadgeForRecord(record) {
   if (!record) {
     return;
@@ -157,6 +167,72 @@ function updateBadgeForRecord(record) {
 
   const hopCount = Array.isArray(record.events) ? record.events.length : 0;
   setBadgeForTab(record.tabId, hopCount);
+}
+
+function isLikelyBrowserUrl(url) {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    const pathname = (parsed.pathname || '').toLowerCase();
+
+    if (NON_NAVIGABLE_EXTENSIONS.some((extension) => pathname.endsWith(extension))) {
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function resolveFinalUrl(record, completionDetails) {
+  const candidates = [];
+  const completionType = completionDetails?.type;
+  const completionUrl = completionDetails?.url;
+
+  const isNavigationCompletion = completionType === 'main_frame' || completionType === 'sub_frame';
+
+  if (isNavigationCompletion && completionUrl) {
+    candidates.push(completionUrl);
+  }
+
+  if (Array.isArray(record.events) && record.events.length > 0) {
+    const navigationalEvent = [...record.events]
+      .reverse()
+      .find((event) => event?.to && (event.type === 'client-redirect' || event.type === 'main_frame' || event.method === 'CLIENT'));
+
+    if (navigationalEvent?.to) {
+      candidates.push(navigationalEvent.to);
+    }
+
+    const lastEvent = record.events.at(-1);
+    if (lastEvent?.to) {
+      candidates.push(lastEvent.to);
+    }
+  }
+
+  if (typeof record.tabId === 'number' && record.tabId >= 0) {
+    const committedUrl = tabLastCommittedUrl.get(record.tabId);
+    if (committedUrl) {
+      candidates.push(committedUrl);
+    }
+  }
+
+  if (completionUrl) {
+    candidates.push(completionUrl);
+  }
+
+  if (record.initialUrl) {
+    candidates.push(record.initialUrl);
+  }
+
+  const uniqueCandidates = candidates.filter((candidate, index) => candidate && candidates.indexOf(candidate) === index);
+
+  const preferred = uniqueCandidates.find((candidate) => isLikelyBrowserUrl(candidate));
+  return preferred || uniqueCandidates[0] || record.initialUrl || completionUrl || null;
 }
 
 function classifyRecord(record, completionDetails = {}) {
@@ -449,11 +525,13 @@ async function finalizeChainRecord(chainId) {
     initiatedAt: chain.initiatedAt,
     completedAt,
     initialUrl: chain.initialUrl || sortedEvents[0]?.from,
-    finalUrl: details.url || sortedEvents.at(-1)?.to,
+    finalUrl: undefined,
     finalStatus: details.statusCode,
     error: errorMessage || null,
     events: sortedEvents
   };
+
+  record.finalUrl = resolveFinalUrl(record, details);
 
   const classification = classifyRecord(record, details);
   record.classification = classification.classification;
@@ -532,6 +610,8 @@ function recordRedirectEvent(details) {
     ip: details.ip,
     type: details.type
   });
+
+  updateBadgeForChain(chain);
 }
 
 async function finalizeChain(details, errorMessage) {
@@ -645,6 +725,7 @@ function handleBeforeRequest(details) {
 
           candidate.pendingFinalDetails = null;
           cancelAwaitingClientRedirect(candidate);
+          updateBadgeForChain(candidate);
         } else {
           pendingClientRedirects.delete(details.tabId);
         }
@@ -725,6 +806,16 @@ if (chrome?.webNavigation?.onCommitted) {
   chrome.webNavigation.onCommitted.addListener((details) => {
     if (typeof details.tabId === 'number' && details.tabId >= 0) {
       tabLastCommittedUrl.set(details.tabId, details.url);
+
+      const activeChainId = tabChains.get(details.tabId);
+      if (activeChainId) {
+        const activeChain = chainsById.get(activeChainId);
+        if (activeChain) {
+          updateBadgeForChain(activeChain);
+          return;
+        }
+      }
+
       setBadgeForTab(details.tabId, 0);
     }
   });
