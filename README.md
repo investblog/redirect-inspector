@@ -9,6 +9,7 @@ Redirect Inspector is a lightweight Chrome Extension that captures redirect chai
 - 🗂️ Stores the most recent 50 redirect chains for quick reference.
 - 🧹 Allows clearing the stored log with a single click.
 - 📋 Presents key details for each hop (origin, destination, HTTP status, method, tab, initiator).
+- 📤 Copies a shareable summary of any redirect chain straight to your clipboard.
 
 ## Getting Started
 
@@ -34,7 +35,12 @@ redirect-inspector/
 
 ## Versioning
 
-This repository follows semantic versioning aligned with the Chrome extension manifest. The current version is **0.1.0**, representing the initial MVP feature set. Future updates should increment the manifest version and document notable changes in this README.
+This repository follows semantic versioning aligned with the Chrome extension manifest. The current version is **1.1.0**, reflecting the clipboard export release. Future updates should increment the manifest version and document notable changes in this README.
+
+## Release History
+
+- **1.1.0** — Added clipboard export for redirect chains and refreshed documentation.
+- **1.0.0** — Initial MVP release.
 
 ## Development Notes
 
