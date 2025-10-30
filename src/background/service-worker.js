@@ -416,6 +416,31 @@ async function finalizeChainRecord(chainId) {
 
   const { details, errorMessage } = completion;
   const completedAt = formatTimestamp(details.timeStamp);
+  const sortedEvents = chain.events
+    .slice()
+    .sort((a, b) => {
+      const timeA = typeof a.timestampMs === 'number' ? a.timestampMs : Number.POSITIVE_INFINITY;
+      const timeB = typeof b.timestampMs === 'number' ? b.timestampMs : Number.POSITIVE_INFINITY;
+      if (timeA === timeB) {
+        return 0;
+      }
+
+      return timeA - timeB;
+    })
+    .map((event) => ({
+      timestamp:
+        typeof event.timestampMs === 'number'
+          ? formatTimestamp(event.timestampMs)
+          : typeof event.timestamp === 'string'
+          ? event.timestamp
+          : formatTimestamp(),
+      from: event.from,
+      to: event.to,
+      statusCode: event.statusCode,
+      method: event.method,
+      ip: event.ip,
+      type: event.type
+    }));
   const record = {
     id: chain.id,
     requestId: details.requestId,
@@ -423,11 +448,11 @@ async function finalizeChainRecord(chainId) {
     initiator: chain.initiator,
     initiatedAt: chain.initiatedAt,
     completedAt,
-    initialUrl: chain.initialUrl || chain.events[0]?.from,
-    finalUrl: details.url || chain.events.at(-1)?.to,
+    initialUrl: chain.initialUrl || sortedEvents[0]?.from,
+    finalUrl: details.url || sortedEvents.at(-1)?.to,
     finalStatus: details.statusCode,
     error: errorMessage || null,
-    events: chain.events
+    events: sortedEvents
   };
 
   const classification = classifyRecord(record, details);
@@ -499,6 +524,7 @@ function recordRedirectEvent(details) {
 
   chain.events.push({
     timestamp: formatTimestamp(details.timeStamp),
+    timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
     from: details.url,
     to: details.redirectUrl,
     statusCode: details.statusCode,
@@ -609,6 +635,7 @@ function handleBeforeRequest(details) {
             candidate.initialUrl;
           candidate.events.push({
             timestamp: formatTimestamp(details.timeStamp),
+            timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
             from: fromUrl,
             to: details.url,
             statusCode: 'JS',
