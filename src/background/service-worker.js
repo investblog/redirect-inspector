@@ -18,6 +18,9 @@ const pendingRedirectTargets = new Map();
 const WEB_REQUEST_FILTER = { urls: ['<all_urls>'] };
 const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
 
+const BADGE_MAX_COUNT = 99;
+const BADGE_COLOR = '#2563eb';
+
 function getHeaderValue(headers = [], headerName) {
   if (!Array.isArray(headers) || !headerName) {
     return undefined;
@@ -49,6 +52,70 @@ function hasPixelExtension(url) {
 
   const lowerUrl = url.toLowerCase();
   return PIXEL_EXTENSIONS.some((extension) => lowerUrl.endsWith(extension));
+}
+
+function formatBadgeText(count) {
+  if (!Number.isFinite(count) || count <= 0) {
+    return '';
+  }
+
+  if (count > BADGE_MAX_COUNT) {
+    return `${BADGE_MAX_COUNT}+`;
+  }
+
+  return String(count);
+}
+
+function setBadgeForTab(tabId, hopCount) {
+  if (!chrome?.action?.setBadgeText) {
+    return;
+  }
+
+  if (typeof tabId !== 'number' || tabId < 0) {
+    return;
+  }
+
+  const text = formatBadgeText(hopCount);
+  chrome.action.setBadgeText({ tabId, text });
+
+  if (text && chrome?.action?.setBadgeBackgroundColor) {
+    chrome.action.setBadgeBackgroundColor({ tabId, color: BADGE_COLOR });
+  }
+}
+
+async function clearAllBadges() {
+  if (!chrome?.action?.setBadgeText) {
+    return;
+  }
+
+  if (!chrome?.tabs?.query) {
+    chrome.action.setBadgeText({ text: '' });
+    return;
+  }
+
+  try {
+    const tabs = await chrome.tabs.query({});
+    await Promise.all(
+      tabs.map((tab) => {
+        if (typeof tab.id !== 'number') {
+          return Promise.resolve();
+        }
+
+        return chrome.action.setBadgeText({ tabId: tab.id, text: '' });
+      })
+    );
+  } catch (error) {
+    console.error('Failed to clear badge text', error);
+  }
+}
+
+function updateBadgeForRecord(record) {
+  if (!record) {
+    return;
+  }
+
+  const hopCount = Array.isArray(record.events) ? record.events.length : 0;
+  setBadgeForTab(record.tabId, hopCount);
 }
 
 function classifyRecord(record, completionDetails = {}) {
@@ -285,6 +352,7 @@ async function finalizeChainRecord(chainId) {
   chain.pendingFinalDetails = null;
 
   await appendRedirectRecord(record);
+  updateBadgeForRecord(record);
   cleanupChain(chain);
 }
 
@@ -457,6 +525,7 @@ function handleRequestError(details) {
 function cleanupTabState(tabId) {
   tabLastCommittedUrl.delete(tabId);
   pendingClientRedirects.delete(tabId);
+  setBadgeForTab(tabId, 0);
 
   const chainId = tabChains.get(tabId);
   if (!chainId) {
@@ -496,6 +565,7 @@ if (chrome?.webNavigation?.onCommitted) {
   chrome.webNavigation.onCommitted.addListener((details) => {
     if (typeof details.tabId === 'number' && details.tabId >= 0) {
       tabLastCommittedUrl.set(details.tabId, details.url);
+      setBadgeForTab(details.tabId, 0);
     }
   });
 }
@@ -532,6 +602,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local
       .set({ [REDIRECT_LOG_KEY]: [] })
       .then(() => {
+        clearAllBadges();
         sendResponse({ success: true });
       })
       .catch((error) => {
@@ -547,6 +618,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local
       .set({ [REDIRECT_LOG_KEY]: [] })
       .then(() => {
+        clearAllBadges();
         sendResponse({ success: true });
       })
       .catch((error) => {

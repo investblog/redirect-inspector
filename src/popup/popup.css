@@ -175,6 +175,11 @@ button:hover {
 .redirect-step__method {
   font-weight: 600;
   color: #1f2937;
+  min-width: 2.5rem;
+}
+
+.redirect-step__method--empty {
+  visibility: hidden;
 }
 
 .redirect-step__url {
@@ -188,6 +193,15 @@ button:hover {
 .redirect-item__footer {
   font-size: 0.75rem;
   color: #374151;
+}
+
+.redirect-item__footer[data-type='success'] {
+  color: #166534;
+  font-weight: 600;
+}
+
+.redirect-item__footer[data-type='warning'] {
+  color: #92400e;
 }
 
 .redirect-item__footer[data-type='error'] {
