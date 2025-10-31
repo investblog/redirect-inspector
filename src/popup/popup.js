@@ -8,6 +8,7 @@ const noiseSummaryEl = document.getElementById('noise-summary');
 
 const SHOW_NOISE_STORAGE_KEY = 'redirectInspector:showNoiseRequests';
 const REDIRECT_LOG_KEY = 'redirectLog';
+const NOISE_CLASSIFICATIONS = new Set(['likely-tracking', 'likely-media']);
 
 let allRedirectRecords = [];
 let storageListenerRegistered = false;
@@ -102,24 +103,12 @@ function showStatus(message, type = 'info') {
 }
 
 // -------- noise helpers --------
-function countNoiseEvents(records) {
-  if (!Array.isArray(records)) return 0;
-  let total = 0;
-  for (const r of records) {
-    if (Array.isArray(r?.events)) {
-      total += r.events.filter((e) => e.noise).length;
-    }
-  }
-  return total;
-}
-
-function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
+function updateNoiseSummary(totalRecords, visibleRecords, showingNoise, hiddenRecords = []) {
   if (!noiseSummaryEl) return;
 
-  const totalNoise = countNoiseEvents(allRedirectRecords);
-  const hiddenCount = totalRecords - visibleRecords;
+  const hiddenCount = Array.isArray(hiddenRecords) ? hiddenRecords.length : 0;
 
-  if (showingNoise || (hiddenCount <= 0 && totalNoise === 0)) {
+  if (showingNoise || hiddenCount <= 0) {
     noiseSummaryEl.hidden = true;
     noiseSummaryEl.textContent = '';
     return;
@@ -127,18 +116,20 @@ function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
 
   noiseSummaryEl.hidden = false;
 
-  if (totalNoise > 0) {
-    noiseSummaryEl.textContent =
-      totalNoise === 1
-        ? '1 service/analytics request hidden'
-        : `${totalNoise} service/analytics requests hidden`;
-    return;
+  const mediaHidden = hiddenRecords.filter((record) => record?.classification === 'likely-media').length;
+  const trackingHidden = hiddenRecords.filter((record) => record?.classification === 'likely-tracking').length;
+
+  let label;
+  if (trackingHidden > 0 && mediaHidden > 0) {
+    label = 'pixel/analytics & media requests';
+  } else if (mediaHidden > 0) {
+    label = mediaHidden === 1 ? 'media request' : 'media requests';
+  } else {
+    label = trackingHidden === 1 ? 'pixel/analytics request' : 'pixel/analytics requests';
   }
 
-  noiseSummaryEl.textContent =
-    hiddenCount === 1
-      ? '1 likely tracking request hidden'
-      : `${hiddenCount} likely tracking requests hidden`;
+  const countText = hiddenCount === 1 ? '1' : String(hiddenCount);
+  noiseSummaryEl.textContent = `${countText} ${label} hidden`;
 }
 
 // -------- filtering --------
@@ -147,15 +138,18 @@ function applyFilters(records) {
   const showingNoise = Boolean(showNoiseToggle?.checked);
   const filtered = showingNoise
     ? safeRecords
-    : safeRecords.filter((record) => record.classification !== 'likely-tracking');
+    : safeRecords.filter((record) => !NOISE_CLASSIFICATIONS.has(record.classification));
+  const hiddenRecords = showingNoise
+    ? []
+    : safeRecords.filter((record) => NOISE_CLASSIFICATIONS.has(record.classification));
 
   renderRedirectLog(filtered);
-  updateNoiseSummary(safeRecords.length, filtered.length, showingNoise);
+  updateNoiseSummary(safeRecords.length, filtered.length, showingNoise, hiddenRecords);
 
   return {
     total: safeRecords.length,
     visible: filtered.length,
-    hidden: safeRecords.length - filtered.length,
+    hidden: hiddenRecords.length,
     showingNoise
   };
 }
@@ -168,7 +162,7 @@ function updateStatusForRecords({ total, visible, hidden, showingNoise }) {
 
   if (!showingNoise && visible === 0 && hidden > 0) {
     showStatus(
-      'Only tracking pixel requests were captured. Enable "Show pixel & analytics requests" to inspect them.',
+      'Only pixel/analytics/media requests were captured. Enable "Show pixel, analytics & media requests" to inspect them.',
       'info'
     );
     return;
@@ -511,6 +505,12 @@ function renderRedirectItem(record) {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';
     classificationEl.textContent = 'Likely tracking pixel';
+    if (record.classificationReason) classificationEl.title = record.classificationReason;
+    metaEl.appendChild(classificationEl);
+  } else if (record.classification === 'likely-media') {
+    const classificationEl = document.createElement('span');
+    classificationEl.className = 'redirect-item__badge';
+    classificationEl.textContent = 'Likely media request';
     if (record.classificationReason) classificationEl.title = record.classificationReason;
     metaEl.appendChild(classificationEl);
   }

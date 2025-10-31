@@ -14,6 +14,31 @@ const CHAIN_FINALIZATION_DELAY_MS = 250;
 
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
+const MEDIA_EXTENSIONS = [
+  '.mp4',
+  '.webm',
+  '.mkv',
+  '.mov',
+  '.m4v',
+  '.m4a',
+  '.mp3',
+  '.aac',
+  '.ogg',
+  '.oga',
+  '.ogv',
+  '.wav',
+  '.flac',
+  '.m3u8',
+  '.mpd',
+  '.ts',
+  '.m2ts'
+];
+const MEDIA_CONTENT_TYPE_PREFIXES = ['video/', 'audio/'];
+const MEDIA_CONTENT_TYPE_INCLUDES = [
+  'application/vnd.apple.mpegurl',
+  'application/x-mpegurl',
+  'application/dash+xml'
+];
 
 const CLIENT_REDIRECT_AWAIT_TYPES = new Set(['main_frame', 'sub_frame', 'script', 'xmlhttprequest', 'other']);
 
@@ -184,13 +209,39 @@ function hasTrackingKeyword(url) {
   return TRACKING_KEYWORDS.some((keyword) => lowerUrl.includes(keyword));
 }
 
-function hasPixelExtension(url) {
+function hasExtension(url, extensions) {
   if (!url) {
     return false;
   }
 
-  const lowerUrl = url.toLowerCase();
-  return PIXEL_EXTENSIONS.some((extension) => lowerUrl.endsWith(extension));
+  try {
+    const lowerPath = new URL(url).pathname.toLowerCase();
+    return extensions.some((extension) => lowerPath.endsWith(extension));
+  } catch (error) {
+    const lowerUrl = url.toLowerCase();
+    return extensions.some((extension) => lowerUrl.includes(extension));
+  }
+}
+
+function hasPixelExtension(url) {
+  return hasExtension(url, PIXEL_EXTENSIONS);
+}
+
+function hasMediaExtension(url) {
+  return hasExtension(url, MEDIA_EXTENSIONS);
+}
+
+function isMediaContentType(contentType) {
+  if (typeof contentType !== 'string') {
+    return false;
+  }
+
+  const lower = contentType.toLowerCase();
+  if (MEDIA_CONTENT_TYPE_PREFIXES.some((prefix) => lower.startsWith(prefix))) {
+    return true;
+  }
+
+  return MEDIA_CONTENT_TYPE_INCLUDES.some((needle) => lower.includes(needle));
 }
 
 function formatBadgeText(count) {
@@ -472,15 +523,48 @@ function resolveFinalUrl(record, completionDetails) {
 }
 
 function classifyRecord(record, completionDetails = {}) {
-  const heuristics = [];
   const events = Array.isArray(record.events) ? record.events : [];
   const finalUrl = record.finalUrl || '';
+
+  const contentTypeHeader = getHeaderValue(completionDetails.responseHeaders, 'content-type');
+  const contentType = typeof contentTypeHeader === 'string' ? contentTypeHeader : undefined;
+  const normalizedContentType = typeof contentTypeHeader === 'string' ? contentTypeHeader.toLowerCase() : '';
+  const contentLength = parseContentLength(getHeaderValue(completionDetails.responseHeaders, 'content-length'));
+
+  const mediaReasons = [];
+
+  if (events.some((event) => event?.type === 'media')) {
+    mediaReasons.push('media request in chain');
+  }
+
+  if (typeof completionDetails.type === 'string' && completionDetails.type.toLowerCase() === 'media') {
+    mediaReasons.push('final resource is media');
+  }
+
+  if (hasMediaExtension(finalUrl)) {
+    mediaReasons.push('media file extension');
+  }
+
+  if (isMediaContentType(normalizedContentType)) {
+    mediaReasons.push('media content-type');
+  }
+
+  if (mediaReasons.length > 0) {
+    return {
+      classification: 'likely-media',
+      classificationReason: mediaReasons.join('; '),
+      contentType,
+      contentLength
+    };
+  }
+
+  const heuristics = [];
 
   if (events.length <= 1) {
     heuristics.push('single hop chain');
   }
 
-  if (events.length > 0 && events.every((event) => event.type === 'image')) {
+  if (events.length > 0 && events.every((event) => event?.type === 'image')) {
     heuristics.push('all hops are image requests');
   }
 
@@ -500,12 +584,10 @@ function classifyRecord(record, completionDetails = {}) {
     heuristics.push('final resource is an image');
   }
 
-  const contentType = getHeaderValue(completionDetails.responseHeaders, 'content-type');
-  if (typeof contentType === 'string' && contentType.toLowerCase().includes('image/')) {
+  if (normalizedContentType.includes('image/')) {
     heuristics.push('image content-type');
   }
 
-  const contentLength = parseContentLength(getHeaderValue(completionDetails.responseHeaders, 'content-length'));
   if (typeof contentLength === 'number' && contentLength <= 2048) {
     heuristics.push('tiny response size');
   }
@@ -515,7 +597,7 @@ function classifyRecord(record, completionDetails = {}) {
   return {
     classification,
     classificationReason: classification === 'likely-tracking' ? heuristics.join('; ') : undefined,
-    contentType: contentType || undefined,
+    contentType,
     contentLength
   };
 }
