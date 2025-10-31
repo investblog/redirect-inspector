@@ -2,15 +2,13 @@
 
 Redirect Inspector is a lightweight Chrome Extension that captures redirect chains in real-time so you can understand how a browser request eventually lands on its destination. It is particularly useful for QA specialists, SEO experts, and developers investigating unexpected navigation flows.
 
-## Features
+## Features (MVP)
 
 - 🧭 Records redirect chains as they happen using the `webRequest` API.
 - 🧩 Groups multiple hops from the same request so you can follow the entire chain.
 - 🗂️ Stores the most recent 50 redirect chains for quick reference.
 - 🧹 Allows clearing the stored log with a single click.
 - 📋 Presents key details for each hop (origin, destination, HTTP status, method, tab, initiator).
-- 🎯 Detects and hides likely tracking pixels and analytics beacons behind an opt-in toggle.
-- 🔎 Surfaces Cloudflare/service noise separately so it never obscures the primary chain.
 - 📤 Copies a shareable summary of any redirect chain straight to your clipboard.
 
 ## Getting Started
@@ -37,11 +35,10 @@ redirect-inspector/
 
 ## Versioning
 
-This repository follows semantic versioning aligned with the Chrome extension manifest. The current version is **1.2.0**, reflecting the tracking-pixel filtering and UI refresh release. Future updates should increment the manifest version and document notable changes in this README.
+This repository follows semantic versioning aligned with the Chrome extension manifest. The current version is **1.1.0**, reflecting the clipboard export release. Future updates should increment the manifest version and document notable changes in this README.
 
 ## Release History
 
-- **1.2.0** — Added pixel & analytics filtering toggle, improved noise classification, and refreshed the popup UI.
 - **1.1.0** — Added clipboard export for redirect chains and refreshed documentation.
 - **1.0.0** — Initial MVP release.
 
