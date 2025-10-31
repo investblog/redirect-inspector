@@ -11,6 +11,25 @@ const REDIRECT_LOG_KEY = 'redirectLog';
 
 let allRedirectRecords = [];
 
+// -------- shared helpers --------
+function isClientHop(step) {
+  if (!step) return false;
+  const method = typeof step.method === 'string' ? step.method.toUpperCase() : step.method;
+  return method === 'CLIENT' || step.type === 'client-redirect' || step.statusCode === 'JS';
+}
+
+function getNoiseEvents(record) {
+  if (Array.isArray(record?.noiseEvents) && record.noiseEvents.length) {
+    return record.noiseEvents;
+  }
+
+  if (Array.isArray(record?.events)) {
+    return record.events.filter((event) => event?.noise);
+  }
+
+  return [];
+}
+
 // -------- messaging --------
 function sendMessageSafe(message) {
   return new Promise((resolve) => {
@@ -35,13 +54,7 @@ function showStatus(message, type = 'info') {
 // -------- noise helpers --------
 function countNoiseEvents(records) {
   if (!Array.isArray(records)) return 0;
-  let total = 0;
-  for (const r of records) {
-    if (Array.isArray(r?.events)) {
-      total += r.events.filter((e) => e.noise).length;
-    }
-  }
-  return total;
+  return records.reduce((total, record) => total + getNoiseEvents(record).length, 0);
 }
 
 function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
@@ -138,28 +151,28 @@ async function handleShowNoiseChange() {
 }
 
 // -------- formatting utils --------
-function formatUrl(url) {
-  if (!url) return 'Unknown URL';
+function formatUrlInternal(raw, { fallbackToRaw = false } = {}) {
+  if (!raw) {
+    return 'Unknown URL';
+  }
+
   try {
-    const parsed = new URL(url);
-    const path =
+    const parsed = new URL(raw);
+    const trimmedPath =
       parsed.pathname.endsWith('/') && parsed.pathname !== '/' ? parsed.pathname.slice(0, -1) : parsed.pathname;
-    const formattedPath = path === '' ? '/' : path;
-    return `${parsed.origin}${formattedPath}${parsed.search}`;
+    const safePath = trimmedPath === '' ? '/' : trimmedPath;
+    return `${parsed.origin}${safePath}${parsed.search}`;
   } catch {
-    return url;
+    return fallbackToRaw ? raw : 'Unknown URL';
   }
 }
 
+function formatUrl(url) {
+  return formatUrlInternal(url, { fallbackToRaw: false });
+}
+
 function formatUrlSafe(raw) {
-  if (!raw) return 'Unknown URL';
-  try {
-    const u = new URL(raw);
-    const path = u.pathname.endsWith('/') && u.pathname !== '/' ? u.pathname.slice(0, -1) : u.pathname;
-    return `${u.origin}${path === '' ? '/' : path}${u.search}`;
-  } catch {
-    return raw;
-  }
+  return formatUrlInternal(raw, { fallbackToRaw: true });
 }
 
 function getHost(raw) {
@@ -201,16 +214,11 @@ function squashClientNoise(events) {
     const step = events[i];
     const next = events[i + 1];
 
-    const isClient =
-      step.method === 'CLIENT' || step.type === 'client-redirect' || step.statusCode === 'JS';
-
     let drop = false;
 
-    if (isClient) {
+    if (isClientHop(step)) {
       const targetHost = getHost(step.to || step.from);
-      const nextIsNormal =
-        next &&
-        !(next.method === 'CLIENT' || next.type === 'client-redirect' || next.statusCode === 'JS');
+      const nextIsNormal = next && !isClientHop(next);
 
       if (targetHost && knownHosts.has(targetHost) && nextIsNormal) {
         drop = true;
@@ -316,8 +324,11 @@ function renderRedirectStep(step) {
 
   const arrowEl = document.createElement('span');
   arrowEl.className = 'redirect-step__arrow';
-  arrowEl.textContent =
-    step.method === 'CLIENT' || step.type === 'client-redirect' ? '↔' : '→';
+  const clientHop = isClientHop(step);
+  arrowEl.textContent = clientHop ? '↔' : '→';
+  if (clientHop) {
+    arrowEl.classList.add('js');
+  }
   midCol.appendChild(arrowEl);
 
   const metaEl = document.createElement('span');
@@ -366,9 +377,14 @@ function normalizeEvents(record) {
 }
 
 // -------- noise section --------
+function describeNoiseLabel(reason) {
+  if (reason === 'cloudflare-challenge') return 'Cloudflare challenge JS';
+  if (reason === 'analytics') return 'Analytics';
+  return 'Service';
+}
+
 function renderNoiseSection(record, containerEl) {
-  const events = normalizeEvents(record);
-  const noisy = events.filter((e) => e.noise);
+  const noisy = getNoiseEvents(record);
   if (!noisy.length) return;
 
   const block = document.createElement('div');
@@ -383,18 +399,12 @@ function renderNoiseSection(record, containerEl) {
     const row = document.createElement('div');
     row.className = 'redirect-item__noise-row';
 
-    const label =
-      e.noiseReason === 'cloudflare-challenge'
-        ? 'Cloudflare challenge JS'
-        : e.noiseReason === 'analytics'
-        ? 'Analytics'
-        : 'Service';
+    const label = describeNoiseLabel(e.noiseReason);
+    const displayUrl = formatUrlSafe(e.to || e.from || '');
+    const shortened = displayUrl.length > 140 ? `${displayUrl.slice(0, 140)}…` : displayUrl;
 
-    const shortUrl = e.to || e.from || '';
-    const displayUrl = shortUrl.length > 140 ? shortUrl.slice(0, 140) + '…' : shortUrl;
-
-    row.textContent = `${label}: ${displayUrl}`;
-    row.title = shortUrl;
+    row.textContent = `${label}: ${shortened}`;
+    row.title = displayUrl;
 
     block.appendChild(row);
   });
