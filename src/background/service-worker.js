@@ -30,6 +30,7 @@ const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
 const BADGE_MAX_COUNT = 99;
 const BADGE_COLOR = '#2563eb';
 const BADGE_COUNTDOWN_COLOR = '#dc2626';
+const BADGE_SUCCESS_COLOR = '#16a34a';
 const BADGE_COUNTDOWN_TICK_MS = 1000;
 
 const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
@@ -224,6 +225,14 @@ async function clearAllBadges() {
 
 function updateBadgeForChain(chain) {
   if (!chain) {
+    return;
+  }
+
+  if (chain.awaitingBadgeFinalColor && typeof chain.tabId === 'number' && chain.tabId >= 0) {
+    const hopCount = Array.isArray(chain.events) ? chain.events.length : 0;
+    const color = chain.awaitingBadgeFinalColor;
+    chain.awaitingBadgeFinalColor = null;
+    setBadgeForTab(chain.tabId, hopCount, { color });
     return;
   }
 
@@ -460,6 +469,75 @@ function formatTimestamp(timestampMs) {
   return new Date().toISOString();
 }
 
+function normalizeEventForRecord(event) {
+  if (!event) {
+    return null;
+  }
+
+  let timestamp;
+  if (typeof event.timestampMs === 'number') {
+    timestamp = formatTimestamp(event.timestampMs);
+  } else if (typeof event.timestamp === 'string') {
+    timestamp = event.timestamp;
+  } else {
+    timestamp = formatTimestamp();
+  }
+
+  return {
+    timestamp,
+    from: event.from,
+    to: event.to,
+    statusCode: event.statusCode,
+    method: event.method,
+    ip: event.ip,
+    type: event.type,
+    noise: event.noise === true,
+    noiseReason: event.noiseReason || undefined
+  };
+}
+
+function prepareEventsForRecord(events) {
+  const safeEvents = Array.isArray(events) ? events.slice() : [];
+
+  const sortedEvents = safeEvents.sort((a, b) => {
+    const timeA = typeof a?.timestampMs === 'number' ? a.timestampMs : Number.POSITIVE_INFINITY;
+    const timeB = typeof b?.timestampMs === 'number' ? b.timestampMs : Number.POSITIVE_INFINITY;
+    if (timeA === timeB) {
+      return 0;
+    }
+    return timeA - timeB;
+  });
+
+  const noisyEvents = [];
+  const nonNoisyEvents = [];
+
+  for (const event of sortedEvents) {
+    if (event?.noise) {
+      noisyEvents.push(event);
+    } else {
+      nonNoisyEvents.push(event);
+    }
+  }
+
+  const eventsForRecord = nonNoisyEvents.length > 0 ? nonNoisyEvents : sortedEvents;
+
+  const normalizedEvents = eventsForRecord
+    .map((event) => normalizeEventForRecord(event))
+    .filter(Boolean);
+  const normalizedNoiseEvents = noisyEvents
+    .map((event) => normalizeEventForRecord(event))
+    .filter(Boolean);
+
+  return {
+    normalizedEvents,
+    normalizedNoiseEvents,
+    allEventsNoisy:
+      normalizedEvents.length > 0 && normalizedEvents.every((event) => event.noise === true),
+    firstEvent: eventsForRecord[0] || null,
+    lastEvent: eventsForRecord.at(-1) || null
+  };
+}
+
 async function appendRedirectRecord(record) {
   try {
     const { [REDIRECT_LOG_KEY]: existing = [] } = await chrome.storage.local.get(REDIRECT_LOG_KEY);
@@ -488,6 +566,7 @@ function createChain(details) {
     awaitingClientRedirectDeadline: null,
     awaitingClientRedirectInterval: null,
     awaitingBadgeToggle: false,
+    awaitingBadgeFinalColor: null,
     cleanupTimer: null,
     pendingRedirectTargetKeys: new Set()
   };
@@ -516,6 +595,7 @@ function cancelAwaitingClientRedirect(chain) {
   }
 
   stopAwaitingClientRedirectCountdown(chain);
+  chain.awaitingBadgeFinalColor = null;
 
   if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
     const pending = pendingClientRedirects.get(chain.tabId);
@@ -591,6 +671,7 @@ function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
       }
     }
 
+    chain.awaitingBadgeFinalColor = BADGE_SUCCESS_COLOR;
     stopAwaitingClientRedirectCountdown(chain);
     updateBadgeForChain(chain);
     scheduleChainFinalization(chain);
@@ -628,6 +709,7 @@ function cleanupChain(chain) {
 
   chain.awaitingClientRedirect = false;
   stopAwaitingClientRedirectCountdown(chain);
+  chain.awaitingBadgeFinalColor = null;
 
   if (chain.cleanupTimer) {
     clearTimeout(chain.cleanupTimer);
@@ -716,42 +798,8 @@ async function finalizeChainRecord(chainId) {
   const { details, errorMessage } = completion;
   const completedAt = formatTimestamp(details.timeStamp);
 
-  // 1. сортируем как есть
-  const sortedEventsRaw = chain.events
-    .slice()
-    .sort((a, b) => {
-      const timeA = typeof a.timestampMs === 'number' ? a.timestampMs : Number.POSITIVE_INFINITY;
-      const timeB = typeof b.timestampMs === 'number' ? b.timestampMs : Number.POSITIVE_INFINITY;
-      if (timeA === timeB) {
-        return 0;
-      }
-      return timeA - timeB;
-    });
-
-  // 2. делим на шумные и нормальные
-  const noisyEvents = sortedEventsRaw.filter((e) => e?.noise === true);
-  const nonNoisyEvents = sortedEventsRaw.filter((e) => !e?.noise);
-
-  // 3. основной список — только нормальные, если они есть
-  const eventsForRecord = nonNoisyEvents.length > 0 ? nonNoisyEvents : sortedEventsRaw;
-
-  // 4. нормализуем
-  const normalizedEvents = eventsForRecord.map((event) => ({
-    timestamp:
-      typeof event.timestampMs === 'number'
-        ? formatTimestamp(event.timestampMs)
-        : typeof event.timestamp === 'string'
-        ? event.timestamp
-        : formatTimestamp(),
-    from: event.from,
-    to: event.to,
-    statusCode: event.statusCode,
-    method: event.method,
-    ip: event.ip,
-    type: event.type,
-    noise: event.noise === true,
-    noiseReason: event.noiseReason || undefined
-  }));
+  const preparedEvents = prepareEventsForRecord(chain.events);
+  const normalizedEvents = preparedEvents.normalizedEvents;
 
   const record = {
     id: chain.id,
@@ -768,23 +816,8 @@ async function finalizeChainRecord(chainId) {
   };
 
   // 5. отдаём шум отдельно
-  if (noisyEvents.length > 0) {
-    record.noiseEvents = noisyEvents.map((event) => ({
-      timestamp:
-        typeof event.timestampMs === 'number'
-          ? formatTimestamp(event.timestampMs)
-          : typeof event.timestamp === 'string'
-          ? event.timestamp
-          : formatTimestamp(),
-      from: event.from,
-      to: event.to,
-      statusCode: event.statusCode,
-      method: event.method,
-      ip: event.ip,
-      type: event.type,
-      noise: true,
-      noiseReason: event.noiseReason || undefined
-    }));
+  if (preparedEvents.normalizedNoiseEvents.length > 0) {
+    record.noiseEvents = preparedEvents.normalizedNoiseEvents;
   }
 
   // 6. финальный URL по очищенному списку
@@ -806,10 +839,7 @@ async function finalizeChainRecord(chainId) {
   chain.pendingFinalDetails = null;
 
   // 8. если в итоге всё равно всё шумное — не пишем
-  const allEventsNoisy =
-    Array.isArray(record.events) &&
-    record.events.length > 0 &&
-    record.events.every((e) => e.noise === true);
+  const allEventsNoisy = preparedEvents.allEventsNoisy;
 
   if (!allEventsNoisy) {
     await appendRedirectRecord(record);
@@ -818,6 +848,55 @@ async function finalizeChainRecord(chainId) {
 
   // 9. чистим
   cleanupChain(chain);
+}
+
+function serializeChainPreview(chain) {
+  if (!chain) {
+    return null;
+  }
+
+  const prepared = prepareEventsForRecord(chain.events);
+  const normalizedEvents = prepared.normalizedEvents;
+
+  const pendingDetails = chain.pendingFinalDetails?.details || null;
+
+  let completedAt;
+  if (typeof pendingDetails?.timeStamp === 'number') {
+    completedAt = formatTimestamp(pendingDetails.timeStamp);
+  } else if (typeof pendingDetails?.timeStamp === 'string') {
+    completedAt = pendingDetails.timeStamp;
+  }
+
+  const record = {
+    id: chain.id,
+    tabId: chain.tabId,
+    initiator: chain.initiator,
+    initiatedAt: chain.initiatedAt,
+    completedAt: completedAt || undefined,
+    initialUrl: chain.initialUrl || normalizedEvents[0]?.from,
+    finalUrl:
+      pendingDetails?.url ||
+      normalizedEvents.at(-1)?.to ||
+      normalizedEvents.at(-1)?.from ||
+      chain.initialUrl,
+    finalStatus: pendingDetails?.statusCode,
+    error: chain.pendingFinalDetails?.errorMessage || null,
+    events: normalizedEvents,
+    pending: true
+  };
+
+  if (prepared.normalizedNoiseEvents.length > 0) {
+    record.noiseEvents = prepared.normalizedNoiseEvents;
+  }
+
+  if (chain.awaitingClientRedirect) {
+    record.awaitingClientRedirect = true;
+    if (typeof chain.awaitingClientRedirectDeadline === 'number') {
+      record.awaitingClientRedirectDeadline = chain.awaitingClientRedirectDeadline;
+    }
+  }
+
+  return record;
 }
 
 // --------- attach / record / consume ---------
@@ -1247,11 +1326,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.storage.local
       .get({ [REDIRECT_LOG_KEY]: [] })
       .then((result) => {
-        sendResponse({ log: result[REDIRECT_LOG_KEY] });
+        const pendingRecords = Array.from(chainsById.values())
+          .map((chain) => serializeChainPreview(chain))
+          .filter((record) => record && Array.isArray(record.events) && record.events.length > 0);
+
+        sendResponse({ log: result[REDIRECT_LOG_KEY], pending: pendingRecords });
       })
       .catch((error) => {
         console.error('Failed to read redirect log', error);
-        sendResponse({ log: [], error: error?.message || 'Unknown error' });
+        sendResponse({ log: [], pending: [], error: error?.message || 'Unknown error' });
       });
 
     return true;
