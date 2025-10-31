@@ -97,6 +97,65 @@ function classifyEventLikeHop(event) {
   return e;
 }
 
+function normalizeForComparison(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  return String(value);
+}
+
+function eventsDescribeSameHop(a, b) {
+  if (!a || !b) {
+    return false;
+  }
+
+  return (
+    normalizeForComparison(a.from) === normalizeForComparison(b.from) &&
+    normalizeForComparison(a.to) === normalizeForComparison(b.to) &&
+    normalizeForComparison(a.statusCode) === normalizeForComparison(b.statusCode) &&
+    normalizeForComparison(a.method) === normalizeForComparison(b.method) &&
+    normalizeForComparison(a.type) === normalizeForComparison(b.type)
+  );
+}
+
+function mergeEventDetails(target, update) {
+  const merged = { ...target };
+  const fields = ['timestamp', 'timestampMs', 'from', 'to', 'statusCode', 'method', 'ip', 'type'];
+
+  for (const field of fields) {
+    if (update[field] !== undefined) {
+      merged[field] = update[field];
+    }
+  }
+
+  if (update.noise !== undefined) {
+    merged.noise = update.noise;
+  }
+  if (update.noiseReason !== undefined) {
+    merged.noiseReason = update.noiseReason;
+  }
+
+  return merged;
+}
+
+function appendEventToChain(chain, event) {
+  if (!chain || !event) {
+    return;
+  }
+
+  const lastIndex = chain.events.length - 1;
+  if (lastIndex >= 0) {
+    const last = chain.events[lastIndex];
+    if (eventsDescribeSameHop(last, event)) {
+      chain.events[lastIndex] = mergeEventDetails(last, event);
+      return;
+    }
+  }
+
+  chain.events.push(event);
+}
+
 function isNoisyFinalCandidate(url) {
   return isNoisyUrl(url);
 }
@@ -978,7 +1037,7 @@ function recordRedirectEvent(details) {
 
   const classifiedEvent = classifyEventLikeHop(rawEvent);
 
-  chain.events.push(classifiedEvent);
+  appendEventToChain(chain, classifiedEvent);
 
   updateBadgeForChain(chain);
 }
@@ -1149,7 +1208,7 @@ function handleBeforeRequest(details) {
           };
           const classifiedClientEvent = classifyEventLikeHop(rawClientEvent);
 
-          candidate.events.push(classifiedClientEvent);
+          appendEventToChain(candidate, classifiedClientEvent);
 
           candidate.pendingFinalDetails = null;
           cancelAwaitingClientRedirect(candidate);
@@ -1272,7 +1331,7 @@ if (chrome?.webNavigation?.onCommitted) {
               type: 'client-redirect'
             });
 
-            chain.events.push(clientHop);
+            appendEventToChain(chain, clientHop);
           }
 
           // мы получили реальный финал → можем завершать
