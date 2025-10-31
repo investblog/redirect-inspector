@@ -875,12 +875,13 @@ function recordRedirectEvent(details) {
         chain.pendingRedirectTargetKeys.add(tabKey);
       }
 
-      // если исходный запрос был без таба — даём универсальный
       if (!(typeof details.tabId === 'number' && details.tabId >= 0)) {
-        const q2 = pendingRedirectTargets.get(anyKey) || [];
-        q2.push(chain.id);
-        pendingRedirectTargets.set(anyKey, q2);
-        chain.pendingRedirectTargetKeys.add(anyKey);
+        if (!chain.initialUrl || chain.initialUrl === details.url) {
+          const q2 = pendingRedirectTargets.get(anyKey) || [];
+          q2.push(chain.id);
+          pendingRedirectTargets.set(anyKey, q2);
+          chain.pendingRedirectTargetKeys.add(anyKey);
+        }
       }
     }
   }
@@ -991,24 +992,39 @@ function consumeQueueByKey(key) {
   return chain;
 }
 
+function sameHost(a, b) {
+  try {
+    return new URL(a).host === new URL(b).host;
+  } catch {
+    return false;
+  }
+}
+
 function consumePendingRedirectTarget(details) {
   const keys = createRedirectTargetKey(details.tabId, details.url);
-  if (!keys) {
-    return null;
-  }
+  if (!keys) return null;
 
   const { tabKey, anyKey } = keys;
 
-  // 1. пробуем по точному табу
+  // 1. точное совпадение по табу
   let chain = consumeQueueByKey(tabKey);
+  if (chain) return chain;
+
+  // 2. пробуем общий, но только если хосты совпадают
+  chain = consumeQueueByKey(anyKey);
   if (chain) {
+    // если у цепочки уже есть initialUrl и он с другим хостом — не берём
+    if (chain.initialUrl && !sameHost(chain.initialUrl, details.url)) {
+      // вернём в очередь и скажем "нет кандидата"
+      // (можно просто не возвращать — мы всё равно чистим по таймауту)
+      return null;
+    }
     return chain;
   }
 
-  // 2. пробуем общий
-  chain = consumeQueueByKey(anyKey);
-  return chain || null;
+  return null;
 }
+
 
 // --------- webRequest handlers ---------
 

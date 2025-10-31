@@ -1,5 +1,4 @@
 // src/popup/popup.js
-
 const statusEl = document.getElementById('status');
 const redirectListEl = document.getElementById('redirect-list');
 const template = document.getElementById('redirect-item-template');
@@ -12,10 +11,7 @@ const REDIRECT_LOG_KEY = 'redirectLog';
 
 let allRedirectRecords = [];
 
-/**
- * Безопасная отправка сообщения в сервис-воркер.
- * Не роняет попап, если воркер не поднялся.
- */
+// -------- messaging --------
 function sendMessageSafe(message) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, (response) => {
@@ -36,7 +32,7 @@ function showStatus(message, type = 'info') {
   statusEl.hidden = !message;
 }
 
-// ---- шум и служебные ----
+// -------- noise helpers --------
 function countNoiseEvents(records) {
   if (!Array.isArray(records)) return 0;
   let total = 0;
@@ -49,9 +45,7 @@ function countNoiseEvents(records) {
 }
 
 function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
-  if (!noiseSummaryEl) {
-    return;
-  }
+  if (!noiseSummaryEl) return;
 
   const totalNoise = countNoiseEvents(allRedirectRecords);
   const hiddenCount = totalRecords - visibleRecords;
@@ -66,14 +60,19 @@ function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
 
   if (totalNoise > 0) {
     noiseSummaryEl.textContent =
-      totalNoise === 1 ? '1 service/analytics request hidden' : `${totalNoise} service/analytics requests hidden`;
+      totalNoise === 1
+        ? '1 service/analytics request hidden'
+        : `${totalNoise} service/analytics requests hidden`;
     return;
   }
 
   noiseSummaryEl.textContent =
-    hiddenCount === 1 ? '1 likely tracking request hidden' : `${hiddenCount} likely tracking requests hidden`;
+    hiddenCount === 1
+      ? '1 likely tracking request hidden'
+      : `${hiddenCount} likely tracking requests hidden`;
 }
 
+// -------- filtering --------
 function applyFilters(records) {
   const safeRecords = Array.isArray(records) ? records : [];
   const showingNoise = Boolean(showNoiseToggle?.checked);
@@ -110,9 +109,7 @@ function updateStatusForRecords({ total, visible, hidden, showingNoise }) {
 }
 
 async function loadNoisePreference() {
-  if (!showNoiseToggle) {
-    return false;
-  }
+  if (!showNoiseToggle) return false;
 
   try {
     const result = await chrome.storage.local.get({ [SHOW_NOISE_STORAGE_KEY]: false });
@@ -127,9 +124,7 @@ async function loadNoisePreference() {
 }
 
 async function handleShowNoiseChange() {
-  if (!showNoiseToggle) {
-    return;
-  }
+  if (!showNoiseToggle) return;
 
   const showNoise = showNoiseToggle.checked;
   try {
@@ -142,64 +137,129 @@ async function handleShowNoiseChange() {
   updateStatusForRecords(context);
 }
 
+// -------- formatting utils --------
 function formatUrl(url) {
-  if (!url) {
-    return 'Unknown URL';
-  }
-
+  if (!url) return 'Unknown URL';
   try {
     const parsed = new URL(url);
-    const path = parsed.pathname.endsWith('/') && parsed.pathname !== '/' ? parsed.pathname.slice(0, -1) : parsed.pathname;
+    const path =
+      parsed.pathname.endsWith('/') && parsed.pathname !== '/' ? parsed.pathname.slice(0, -1) : parsed.pathname;
     const formattedPath = path === '' ? '/' : path;
     return `${parsed.origin}${formattedPath}${parsed.search}`;
-  } catch (error) {
+  } catch {
     return url;
   }
 }
 
-function describeTab(tabId) {
-  if (typeof tabId === 'number' && tabId >= 0) {
-    return `Tab ${tabId}`;
+function formatUrlSafe(raw) {
+  if (!raw) return 'Unknown URL';
+  try {
+    const u = new URL(raw);
+    const path = u.pathname.endsWith('/') && u.pathname !== '/' ? u.pathname.slice(0, -1) : u.pathname;
+    return `${u.origin}${path === '' ? '/' : path}${u.search}`;
+  } catch {
+    return raw;
   }
+}
 
-  return 'Background';
+function getHost(raw) {
+  try {
+    return new URL(raw).host;
+  } catch {
+    return '';
+  }
+}
+
+function describeTab(tabId) {
+  return typeof tabId === 'number' && tabId >= 0 ? `Tab ${tabId}` : 'Background';
 }
 
 function describeHops(count) {
-  if (count === 0) {
-    return 'No hops recorded';
-  }
-
-  if (count === 1) {
-    return '1 hop';
-  }
-
+  if (count === 0) return 'No hops recorded';
+  if (count === 1) return '1 hop';
   return `${count} hops`;
 }
 
-// ---- экспорт ----
+// -------- export --------
+function normalizeEventsForExport(record) {
+  return Array.isArray(record?.events) ? record.events : [];
+}
+
+function squashClientNoise(events) {
+  if (!Array.isArray(events) || events.length === 0) return events;
+
+  const result = [];
+  const knownHosts = new Set(
+    events
+      .map((e) => e.to || e.from)
+      .filter(Boolean)
+      .map((u) => getHost(u))
+      .filter(Boolean)
+  );
+
+  for (let i = 0; i < events.length; i++) {
+    const step = events[i];
+    const next = events[i + 1];
+
+    const isClient =
+      step.method === 'CLIENT' || step.type === 'client-redirect' || step.statusCode === 'JS';
+
+    let drop = false;
+
+    if (isClient) {
+      const targetHost = getHost(step.to || step.from);
+      const nextIsNormal =
+        next &&
+        !(next.method === 'CLIENT' || next.type === 'client-redirect' || next.statusCode === 'JS');
+
+      if (targetHost && knownHosts.has(targetHost) && nextIsNormal) {
+        drop = true;
+      }
+    }
+
+    if (!drop) {
+      result.push(step);
+    }
+  }
+
+  return result;
+}
+
 function formatRedirectChainForExport(record) {
-  const events = normalizeEvents(record);
+  const rawEvents = normalizeEventsForExport(record);
+  const events = squashClientNoise(rawEvents);
+
+  // доп. сжатие по host
+  const compact = [];
+  for (const step of events) {
+    const last = compact[compact.length - 1];
+    const curHost = getHost(step.to || step.from);
+    const lastHost = last ? getHost(last.to || last.from) : null;
+    if (last && curHost && lastHost && curHost === lastHost) {
+      continue;
+    }
+    compact.push(step);
+  }
+
   const lines = ['Redirect chain:'];
 
-  if (events.length === 0) {
+  if (compact.length === 0) {
     lines.push('No steps recorded.');
   } else {
-    events.forEach((step, index) => {
+    compact.forEach((step, index) => {
       const status = step.statusCode ?? '—';
-      const destination = formatUrl(step.to || step.from);
+      const destination = formatUrlSafe(step.to || step.from);
       lines.push(`${index + 1}. ${status} → ${destination}`);
     });
   }
 
-  const finalUrl = record?.finalUrl || events.at(-1)?.to || record?.initialUrl;
+  const finalUrl =
+    record?.finalUrl ||
+    (compact.length ? compact.at(-1).to || compact.at(-1).from : null) ||
+    record?.initialUrl;
 
-  // если цепочка целиком служебная — final URL не пишем
-  const allEventsNoisy =
-    Array.isArray(events) && events.length > 0 && events.every((e) => e.noise === true);
-
-  if (finalUrl && !allEventsNoisy) {
-    lines.push('', `Final URL: ${formatUrl(finalUrl)}`);
+  if (finalUrl) {
+    lines.push('', `Final URL: ${formatUrlSafe(finalUrl)}`);
   }
 
   lines.push('', 'Generated by: Redirect Inspector (301.st)');
@@ -208,26 +268,15 @@ function formatRedirectChainForExport(record) {
 }
 
 async function copyRedirectChain(record, triggerButton) {
-  if (!record) {
-    return;
-  }
-
   const summary = formatRedirectChainForExport(record);
-
   try {
-    if (!navigator?.clipboard?.writeText) {
-      throw new Error('Clipboard API is not available.');
-    }
-
     await navigator.clipboard.writeText(summary);
-
     if (triggerButton) {
       const originalTitle = triggerButton.title;
       triggerButton.title = 'Copied!';
       triggerButton.setAttribute('aria-label', 'Copied!');
       triggerButton.classList.add('redirect-item__copy--success');
       triggerButton.disabled = true;
-
       setTimeout(() => {
         triggerButton.disabled = false;
         triggerButton.title = originalTitle;
@@ -241,53 +290,65 @@ async function copyRedirectChain(record, triggerButton) {
   }
 }
 
-// ---- шаги ----
+// -------- render steps --------
 function renderRedirectStep(step) {
-  const item = document.createElement('li');
-  item.className = 'redirect-step';
+  const li = document.createElement('li');
+  li.className = 'redirect-step';
+
+  // from
+  const fromCol = document.createElement('div');
+  fromCol.className = 'redirect-step__col redirect-step__col--from';
 
   const statusEl = document.createElement('span');
   statusEl.className = 'redirect-step__status';
   statusEl.textContent = step.statusCode ?? '—';
-  item.appendChild(statusEl);
+  fromCol.appendChild(statusEl);
 
-  const methodEl = document.createElement('span');
-  methodEl.className = 'redirect-step__method';
-  const method = typeof step.method === 'string' ? step.method.toUpperCase() : '';
-  if (method && method !== 'GET' && method !== 'CLIENT') {
-    methodEl.textContent = method;
-  } else {
-    methodEl.classList.add('redirect-step__method--empty');
-  }
-  if (step.type) {
-    methodEl.title = step.type;
-  }
-  item.appendChild(methodEl);
+  const fromUrlEl = document.createElement('span');
+  fromUrlEl.className = 'redirect-step__url';
+  fromUrlEl.textContent = formatUrl(step.from);
+  fromUrlEl.title = step.from || '';
+  fromCol.appendChild(fromUrlEl);
 
-  const fromEl = document.createElement('span');
-  fromEl.className = 'redirect-step__url';
-  fromEl.textContent = formatUrl(step.from);
-  fromEl.title = step.from;
-  item.appendChild(fromEl);
+  // middle
+  const midCol = document.createElement('div');
+  midCol.className = 'redirect-step__col redirect-step__col--mid';
 
   const arrowEl = document.createElement('span');
   arrowEl.className = 'redirect-step__arrow';
-  arrowEl.textContent = '→';
-  item.appendChild(arrowEl);
+  arrowEl.textContent =
+    step.method === 'CLIENT' || step.type === 'client-redirect' ? '↔' : '→';
+  midCol.appendChild(arrowEl);
 
-  const toEl = document.createElement('span');
-  toEl.className = 'redirect-step__url';
-  toEl.textContent = formatUrl(step.to);
-  toEl.title = step.to;
-  item.appendChild(toEl);
+  const metaEl = document.createElement('span');
+  metaEl.className = 'redirect-step__meta';
+  const parts = [];
+  if (step.method && step.method !== 'GET') parts.push(step.method.toUpperCase());
+  if (step.type && step.type !== 'main_frame') parts.push(step.type);
+  if (step.noise) parts.push(step.noiseReason || 'noise');
+  metaEl.textContent = parts.join(' • ');
+  midCol.appendChild(metaEl);
 
-  return item;
+  // to
+  const toCol = document.createElement('div');
+  toCol.className = 'redirect-step__col redirect-step__col--to';
+
+  const toUrlEl = document.createElement('span');
+  toUrlEl.className = 'redirect-step__url';
+  const toText = step.to ? formatUrl(step.to) : '—';
+  toUrlEl.textContent = toText;
+  toUrlEl.title = step.to || '';
+  toCol.appendChild(toUrlEl);
+
+  li.appendChild(fromCol);
+  li.appendChild(midCol);
+  li.appendChild(toCol);
+
+  return li;
 }
 
 function normalizeEvents(record) {
-  if (Array.isArray(record.events) && record.events.length > 0) {
-    return record.events;
-  }
+  if (Array.isArray(record.events) && record.events.length > 0) return record.events;
 
   if (record.url && record.redirectUrl) {
     return [
@@ -304,14 +365,11 @@ function normalizeEvents(record) {
   return [];
 }
 
-// ---- рендер секции служебных ----
+// -------- noise section --------
 function renderNoiseSection(record, containerEl) {
   const events = normalizeEvents(record);
   const noisy = events.filter((e) => e.noise);
-
-  if (!noisy.length) {
-    return;
-  }
+  if (!noisy.length) return;
 
   const block = document.createElement('div');
   block.className = 'redirect-item__noise';
@@ -344,16 +402,16 @@ function renderNoiseSection(record, containerEl) {
   containerEl.appendChild(block);
 }
 
+// -------- render item --------
 function renderRedirectItem(record) {
   const clone = template.content.cloneNode(true);
 
-  const titleEl = clone.querySelector('.redirect-item__title');
   const events = normalizeEvents(record);
-  const finalUrl = record.finalUrl || events.at(-1)?.to || record.initialUrl;
-  titleEl.textContent = formatUrl(finalUrl || record.initialUrl || 'Unknown URL');
-  if (finalUrl) {
-    titleEl.title = finalUrl;
-  }
+
+  const titleEl = clone.querySelector('.redirect-item__title');
+  const titleUrl = pickTitleUrl(record, events);
+  titleEl.textContent = formatUrl(titleUrl);
+  titleEl.title = titleUrl;
 
   const timestampEl = clone.querySelector('.redirect-item__timestamp');
   const completedAt = record.completedAt || events.at(-1)?.timestamp || record.initiatedAt;
@@ -363,11 +421,9 @@ function renderRedirectItem(record) {
   tabEl.textContent = describeTab(record.tabId);
 
   const hopsEl = clone.querySelector('.redirect-item__hops');
-  const hopCount = events.length;
-  hopsEl.textContent = describeHops(hopCount);
+  hopsEl.textContent = describeHops(events.length);
 
   const metaEl = clone.querySelector('.redirect-item__meta');
-
   if (record.initiator) {
     const initiatorEl = document.createElement('span');
     initiatorEl.className = 'redirect-item__initiator';
@@ -380,9 +436,7 @@ function renderRedirectItem(record) {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';
     classificationEl.textContent = 'Likely tracking pixel';
-    if (record.classificationReason) {
-      classificationEl.title = record.classificationReason;
-    }
+    if (record.classificationReason) classificationEl.title = record.classificationReason;
     metaEl.appendChild(classificationEl);
   }
 
@@ -391,7 +445,6 @@ function renderRedirectItem(record) {
     stepsEl.appendChild(renderRedirectStep(step));
   });
 
-  // добавляем служебные запросы под основным списком
   const rootEl = clone.querySelector('.redirect-item');
   renderNoiseSection(record, rootEl);
 
@@ -409,20 +462,12 @@ function renderRedirectItem(record) {
     footerEl.hidden = false;
   } else if (record.finalStatus) {
     footerEl.textContent = `Completed with status ${record.finalStatus}`;
-
-    const statusCode = Number(record.finalStatus);
-    if (Number.isFinite(statusCode)) {
-      if (statusCode >= 200 && statusCode < 300) {
-        footerEl.dataset.type = 'success';
-      } else if (statusCode >= 400) {
-        footerEl.dataset.type = 'error';
-      } else {
-        footerEl.dataset.type = 'warning';
-      }
-    } else {
-      delete footerEl.dataset.type;
+    const code = Number(record.finalStatus);
+    if (Number.isFinite(code)) {
+      if (code >= 200 && code < 300) footerEl.dataset.type = 'success';
+      else if (code >= 400) footerEl.dataset.type = 'error';
+      else footerEl.dataset.type = 'warning';
     }
-
     footerEl.hidden = false;
   } else {
     footerEl.remove();
@@ -431,6 +476,30 @@ function renderRedirectItem(record) {
   return clone;
 }
 
+// helper for title
+function sameHost(a, b) {
+  try {
+    return new URL(a).host === new URL(b).host;
+  } catch {
+    return false;
+  }
+}
+
+function pickTitleUrl(record, events) {
+  if (record.finalUrl) return record.finalUrl;
+
+  const last = events.at(-1);
+  if (last?.to) return last.to;
+  if (last?.from) return last.from;
+
+  if (record.initialUrl && last?.to && sameHost(record.initialUrl, last.to)) {
+    return record.initialUrl;
+  }
+
+  return record.initialUrl || 'Unknown URL';
+}
+
+// -------- render list --------
 function renderRedirectLog(records) {
   redirectListEl.innerHTML = '';
   records.forEach((record) => {
@@ -438,10 +507,10 @@ function renderRedirectLog(records) {
   });
 }
 
+// -------- load / clear --------
 async function fetchRedirectLog() {
   showStatus('Loading redirect chains…', 'info');
 
-  // пробуем через фон
   const response = await sendMessageSafe({ type: 'redirect-inspector:get-log' });
 
   if (response && !response.__error && !response.error) {
@@ -451,7 +520,6 @@ async function fetchRedirectLog() {
     return;
   }
 
-  // фон не ответил — читаем напрямую из storage
   console.warn('Background not available / failed, reading local storage…');
   try {
     const storage = await chrome.storage.local.get({ [REDIRECT_LOG_KEY]: [] });
@@ -467,18 +535,15 @@ async function fetchRedirectLog() {
 async function clearRedirectLog() {
   showStatus('Clearing…', 'info');
 
-  // 1. пробуем через фон
   const response = await sendMessageSafe({ type: 'redirect-inspector:clear-log' });
 
   if (response && !response.__error && response.success) {
-    // фон очистил
     allRedirectRecords = [];
     applyFilters(allRedirectRecords);
     showStatus('Redirect log cleared.', 'success');
     return;
   }
 
-  // 2. фон не ответил → чистим сами
   try {
     await chrome.storage.local.set({ [REDIRECT_LOG_KEY]: [] });
     allRedirectRecords = [];
@@ -490,20 +555,18 @@ async function clearRedirectLog() {
   }
 }
 
+// -------- init --------
 clearButton.addEventListener('click', clearRedirectLog);
 
 if (showNoiseToggle) {
   showNoiseToggle.addEventListener('change', handleShowNoiseChange);
 }
 
-async function initializePopup() {
-  await loadNoisePreference();
-  updateNoiseSummary(allRedirectRecords.length, allRedirectRecords.length, Boolean(showNoiseToggle?.checked));
-  await fetchRedirectLog();
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  initializePopup().catch((error) => {
+  (async () => {
+    await loadNoisePreference();
+    await fetchRedirectLog();
+  })().catch((error) => {
     console.error('Failed to initialize popup', error);
     showStatus('Failed to initialize popup', 'error');
   });

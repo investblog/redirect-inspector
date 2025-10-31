@@ -1,268 +1,252 @@
 :root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
+color-scheme: light dark;
+font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+font-size: 14px;
 }
-
 body {
-  margin: 0;
-  padding: 0.75rem;
-  min-width: 420px; /* было 340px */
-  max-width: 640px; /* на будущее */
-  background-color: #f5f5f5;
-  color: #1f2933;
+margin: 0;
+padding: 0.75rem;
+min-width: 420px; /* было 340px /
+max-width: 640px; / на будущее */
+background-color: #f5f5f5;
+color: #1f2933;
 }
-
 header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.5rem;
+margin-bottom: 0.75rem;
 }
-
 .controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+margin-bottom: 0.75rem;
+flex-wrap: wrap;
 }
-
 .controls__toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  color: #1f2933;
+display: flex;
+align-items: center;
+gap: 0.4rem;
+font-size: 0.8rem;
+color: #1f2933;
 }
-
 .controls__toggle input[type='checkbox'] {
-  width: 1rem;
-  height: 1rem;
-  accent-color: #2563eb;
+width: 1rem;
+height: 1rem;
+accent-color: #2563eb;
 }
-
 .controls__summary {
-  font-size: 0.75rem;
-  color: #92400e;
-  font-weight: 600;
-  margin-left: auto;
-  text-align: right;
+font-size: 0.75rem;
+color: #92400e;
+font-weight: 600;
+margin-left: auto;
+text-align: right;
 }
-
 h1 {
-  font-size: 1.1rem;
-  margin: 0;
+font-size: 1.1rem;
+margin: 0;
 }
-
 button {
-  cursor: pointer;
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 0.35rem;
-  padding: 0.4rem 0.85rem;
-  font-weight: 600;
+cursor: pointer;
+background: #2563eb;
+color: #fff;
+border: none;
+border-radius: 0.35rem;
+padding: 0.4rem 0.85rem;
+font-weight: 600;
 }
-
 button:hover {
-  background: #1d4ed8;
+background: #1d4ed8;
 }
-
 #status {
-  margin-bottom: 0.75rem;
-  padding: 0.5rem;
-  border-radius: 0.35rem;
-  font-size: 0.85rem;
+margin-bottom: 0.75rem;
+padding: 0.5rem;
+border-radius: 0.35rem;
+font-size: 0.85rem;
 }
-
 #status[data-type='info'] {
-  background: #e0f2fe;
-  color: #0c4a6e;
+background: #e0f2fe;
+color: #0c4a6e;
 }
-
 #status[data-type='error'] {
-  background: #fee2e2;
-  color: #7f1d1d;
+background: #fee2e2;
+color: #7f1d1d;
 }
-
 #status[data-type='success'] {
-  background: #dcfce7;
-  color: #14532d;
+background: #dcfce7;
+color: #14532d;
 }
-
 .redirect-list {
-  display: grid;
-  gap: 0.75rem;
-  max-height: 500px; /* было 420px */
-  overflow-y: auto;
-  padding-bottom: 0.25rem;
+display: grid;
+gap: 0.75rem;
+max-height: 500px; /* было 420px */
+overflow-y: auto;
+padding-bottom: 0.25rem;
 }
-
 .redirect-item {
-  background: #fff;
-  border-radius: 0.75rem;
-  padding: 1rem; /* было 0.85rem */
-  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08);
-  display: grid;
-  gap: 0.75rem;
-  transition: box-shadow 0.12s ease-in-out, transform 0.12s ease-in-out;
+background: #fff;
+border-radius: 0.75rem;
+padding: 1rem; /* было 0.85rem */
+box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08);
+display: grid;
+gap: 0.75rem;
+transition: box-shadow 0.12s ease-in-out, transform 0.12s ease-in-out;
 }
-
 .redirect-item:hover {
-  box-shadow: 0 2px 9px rgba(15, 23, 42, 0.13);
-  transform: translateY(-1px);
+box-shadow: 0 2px 9px rgba(15, 23, 42, 0.13);
+transform: translateY(-1px);
 }
-
 .redirect-item__header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+display: flex;
+flex-direction: column;
+gap: 0.35rem;
 }
-
 .redirect-item__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.5rem;
 }
-
 .redirect-item__title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #111827;
-  word-break: break-all;
+margin: 0;
+font-size: 0.95rem;
+font-weight: 600;
+color: #111827;
+word-break: break-all;
 }
-
 .redirect-item__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #4b5563;
+display: flex;
+flex-wrap: wrap;
+gap: 0.5rem;
+font-size: 0.75rem;
+color: #4b5563;
 }
-
 .redirect-item__copy {
-  background: none;
-  color: #6b7280;
-  border: none;
-  padding: 0.35rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 120ms ease-in-out, background-color 120ms ease-in-out;
+background: none;
+color: #6b7280;
+border: none;
+padding: 0.35rem;
+border-radius: 0.5rem;
+cursor: pointer;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+transition: color 120ms ease-in-out, background-color 120ms ease-in-out;
 }
-
 .redirect-item__copy:hover,
 .redirect-item__copy:focus-visible {
-  color: #111827;
-  background: rgba(17, 24, 39, 0.08);
+color: #111827;
+background: rgba(17, 24, 39, 0.08);
 }
-
 .redirect-item__copy:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
+outline: 2px solid #6366f1;
+outline-offset: 2px;
 }
-
 .redirect-item__copy:disabled {
-  opacity: 0.6;
-  cursor: default;
+opacity: 0.6;
+cursor: default;
 }
-
 .redirect-item__copy--success {
-  color: #047857;
+color: #047857;
 }
-
 .redirect-item__copy svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  display: block;
+width: 1.1rem;
+height: 1.1rem;
+display: block;
 }
-
 .redirect-item__badge {
-  background: #fef3c7;
-  color: #92400e;
-  border-radius: 999px;
-  padding: 0.15rem 0.5rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+background: #fef3c7;
+color: #92400e;
+border-radius: 999px;
+padding: 0.15rem 0.5rem;
+font-size: 0.65rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.04em;
 }
-
 .redirect-item__initiator {
-  color: #1d4ed8;
-  font-weight: 500;
+color: #1d4ed8;
+font-weight: 500;
 }
-
 .redirect-item__steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
+list-style: none;
+margin: 0;
+padding: 0;
+display: grid;
+gap: 0.5rem;
 }
-
-/* шаги флексом, чтобы не было пустых колонок */
-.redirect-step {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.78rem;
-  flex-wrap: nowrap;
-}
-
-/* статус фиксированный */
-.redirect-step__status {
-  min-width: 2.5rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.35rem;
-  background: #ede9fe;
-  color: #5b21b6;
-  text-align: center;
-  font-weight: 600;
-}
-
-/* метод показываем, если он есть */
-.redirect-step__method {
-  font-weight: 600;
-  color: #1f2937;
-  font-size: 0.7rem;
-  line-height: 1;
-}
-
-/* стрелка — просто иконка */
-.redirect-step__arrow {
-  color: #6b7280;
-  flex: 0 0 auto;
-}
-
-/* URL тянутся и обрезаются */
-.redirect-step__url {
-  min-width: 0;
-  word-break: break-all;
-  flex: 1 1 auto;
-}
-
 .redirect-item__footer {
-  font-size: 0.75rem;
-  color: #374151;
+font-size: 0.75rem;
+color: #374151;
 }
-
 .redirect-item__footer[data-type='success'] {
-  color: #166534;
-  font-weight: 600;
+color: #166534;
+font-weight: 600;
 }
-
 .redirect-item__footer[data-type='warning'] {
-  color: #92400e;
+color: #92400e;
 }
-
 .redirect-item__footer[data-type='error'] {
-  color: #991b1b;
+color: #991b1b;
+}
+/* шаг теперь 3 колонки: from | arrow | to */
+.redirect-step {
+display: grid;
+grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1.2fr);
+gap: 0.5rem;
+align-items: center;
+font-size: 0.78rem;
+}
+.redirect-step__col {
+min-width: 0;
+display: flex;
+align-items: center;
+gap: 0.35rem;
+}
+.redirect-step__col--from,
+.redirect-step__col--to {
+overflow: hidden;
+}
+.redirect-step__status {
+min-width: 2.4rem;
+text-align: center;
+background: #ede9fe;
+color: #5b21b6;
+border-radius: 0.35rem;
+padding: 0.15rem 0.4rem;
+font-weight: 600;
+flex: 0 0 auto;
+}
+.redirect-step__url {
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
+word-break: break-all;
+flex: 1 1 auto;
+}
+/* центр */
+.redirect-step__col--mid {
+flex-direction: column;
+gap: 0.25rem;
+justify-content: center;
+text-align: center;
+min-width: 3.5rem;
+}
+.redirect-step__arrow {
+color: #6b7280;
+font-size: 1.05rem;
+line-height: 1;
+}
+.redirect-step__col--mid .redirect-step__arrow.js {
+  color: #2563eb; /* синий оттенок для client redirect */
+}
+.redirect-step__meta {
+font-size: 0.65rem;
+color: #6b7280;
+line-height: 1.1;
+max-width: 6rem;
+word-break: break-word;
 }
