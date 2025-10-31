@@ -1,22 +1,26 @@
 // src/background/service-worker.js
 
+// --- storage / limits ---
 const REDIRECT_LOG_KEY = 'redirectLog';
 const MAX_RECORDS = 50;
-const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут на "живую" цепочку
+const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000; // 5 минут
 
-// ожидание клиентских редиректов
+// --- ожидание клиентских редиректов ---
 const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 10 * 1000;
 const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 45 * 1000;
 const CLIENT_REDIRECT_EXTENDED_TYPES = new Set(['script', 'xmlhttprequest', 'other']);
 
-// ВАЖНО: ставим небольшую задержку, чтобы "безтабный → таб" не рвался
+// задержка, чтобы не рвать цепочку
 const CHAIN_FINALIZATION_DELAY_MS = 250;
 
+// --- эвристики трекинга ---
 const TRACKING_KEYWORDS = ['pixel', 'track', 'collect', 'analytics', 'impression', 'beacon', 'measure'];
 const PIXEL_EXTENSIONS = ['.gif', '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.svg'];
 
+// какие типы могут порождать клиентский редирект
 const CLIENT_REDIRECT_AWAIT_TYPES = new Set(['main_frame', 'sub_frame', 'script', 'xmlhttprequest', 'other']);
 
+// --- глобальные коллекции цепочек ---
 const chainsById = new Map();
 const requestToChain = new Map();
 const tabChains = new Map();
@@ -24,87 +28,175 @@ const tabLastCommittedUrl = new Map();
 const pendingClientRedirects = new Map();
 const pendingRedirectTargets = new Map();
 
+// --- webRequest настройки ---
 const WEB_REQUEST_FILTER = { urls: ['<all_urls>'] };
 const WEB_REQUEST_EXTRA_INFO_SPEC = ['responseHeaders'];
 
+// --- badge ---
 const BADGE_MAX_COUNT = 99;
 const BADGE_COLOR = '#2563eb';
 const BADGE_COUNTDOWN_COLOR = '#dc2626';
 const BADGE_COUNTDOWN_TICK_MS = 1000;
 
+// --- какие расширения считаем "не навигацией" ---
 const NON_NAVIGABLE_EXTENSIONS = ['.js', '.mjs'];
 const LIKELY_BROWSER_PROTOCOLS = new Set(['http:', 'https:']);
 
-// --- шумные типы (CF / analytics / beacons) ---
-const NOISY_URL_PATTERNS = [
+// ===================================================================
+//  ЕДИНЫЙ СПИСОК СЕРВИСНЫХ / ШУМНЫХ ХОСТОВ И ПУТЕЙ
+//  (его же используем в popup.js)
+// ===================================================================
+const NOISY_HOSTS = [
+  // Cloudflare
+  'cloudflareinsights.com',
+  'cf-ns.com',
+  'cdn.cloudflare.net',
+  // Google / GA
+  'www.googletagmanager.com',
+  'googletagmanager.com',
+  'www.google-analytics.com',
+  'google-analytics.com',
+  'stats.g.doubleclick.net',
+  // Meta
+  'connect.facebook.net',
+  'graph.facebook.com',
+  'www.facebook.com',
+  // Yandex
+  'mc.yandex.ru',
+  'yastatic.net',
+  'yandex.ru',
+  'safeframe.yastatic.net',
+  // VK / Mail
+  'vk.com',
+  'api.vk.com',
+  'id.vk.com',
+  'auth.mail.ru',
+  // рекламные / баннерные cdn
+  'doubleclick.net',
+  'ads.pubmatic.com',
+  // твои конкретные
+  'strm.yandex.net'
+];
+
+// части путей, которые часто шума
+const NOISY_PATH_PARTS = [
   '/cdn-cgi/challenge-platform/',
   '/cdn-cgi/challenge/',
   '/cdn-cgi/bm/',
   '/cdn-cgi/trace',
   '/cdn-cgi/zaraz/',
   '/cdn-cgi/scripts/',
+  '/safeframe-bundles/',
+  '/gtm.js',
+  '/analytics.js'
 ];
 
-const NOISY_HOST_SUFFIXES = [
-  'googletagmanager.com',
-  'google-analytics.com',
-  'stats.g.doubleclick.net',
-  'connect.facebook.net',
+// медиатипы / вспомогательные запросы
+const NOISY_RESOURCE_TYPES = new Set([
+  'media',
+  'script',
+  'stylesheet',
+  'font',
+  'imageset',
+  'object',
+  'other',
+  'ping',
+  'csp_report',
+  'xmlhttprequest' // часто трекинг
+]);
+
+// хосты, которые считаем "авторизационными" и можем показывать, даже если это hop
+const AUTH_HOP_HOSTS = [
+  // Яндекс
+  'passport.yandex.ru',
+  'sso.yandex.ru',
+  // Google
+  'accounts.google.com',
+  // Meta / Facebook
   'facebook.com',
-  'tiktok.com',
-  'analytics.yahoo.com',
-  'radar.cedexis.com',
+  'm.facebook.com',
+  'login.facebook.com',
+  // VK / Mail
+  'login.vk.com',
+  'id.vk.com',
+  'auth.mail.ru',
+  // Telegram / Discord / Twitch
+  'oauth.telegram.org',
+  'discord.com',
+  'id.twitch.tv',
+  // Microsoft
+  'login.live.com',
+  'login.microsoftonline.com',
+  // Apple
+  'appleid.apple.com',
+  // Steam / Epic
+  'steamcommunity.com',
+  'store.steampowered.com',
+  'www.epicgames.com',
+  // crypto / sso
+  'accounts.binance.com',
+  'sso.binance.com',
+  'login.coinbase.com'
 ];
 
-// ----------------- helpers -----------------
-
-function isNoisyUrl(url) {
-  if (!url) return false;
+// ===================================================================
+//  helpers
+// ===================================================================
+function isNoisyUrl(raw) {
+  if (!raw) return false;
+  let u;
   try {
-    const u = new URL(url);
-    if (NOISY_URL_PATTERNS.some((p) => u.pathname.includes(p))) {
-      return true;
-    }
-    if (
-      NOISY_HOST_SUFFIXES.some(
-        (host) => u.hostname === host || u.hostname.endsWith('.' + host)
-      )
-    ) {
-      return true;
-    }
-  } catch (e) {
-    // ignore parse error
+    u = new URL(raw);
+  } catch {
+    return false;
   }
+
+  const host = u.hostname;
+  // сверяем с сервисными хостами
+  if (
+    NOISY_HOSTS.some((svc) => host === svc || host.endsWith('.' + svc))
+  ) {
+    return true;
+  }
+
+  // сверяем с сервисными путями
+  const path = u.pathname || '';
+  if (NOISY_PATH_PARTS.some((part) => path.includes(part))) {
+    return true;
+  }
+
   return false;
 }
 
-// помечаем hop
-function classifyEventLikeHop(event) {
-  const e = { ...event };
-  e.noise = false;
-  e.noiseReason = null;
-
-  if (e.to && isNoisyUrl(e.to)) {
-    e.noise = true;
-    if (e.to.includes('/cdn-cgi/')) {
-      e.noiseReason = 'cloudflare-challenge';
-    } else {
-      e.noiseReason = 'analytics';
-    }
+function isNoisyRecord(record) {
+  // 1) если уже помечен бэкграундом
+  if (record.classification === 'likely-tracking') {
+    return true;
   }
 
-  return e;
-}
+  const events = Array.isArray(record.events) ? record.events : [];
+  if (!events.length) return false;
 
-function isNoisyFinalCandidate(url) {
-  return isNoisyUrl(url);
+  // 2) если все шаги — тех.типы (медиа, скрипты и т.п.)
+  const allNoisyType = events.every((e) => e.type && NOISY_RESOURCE_TYPES.has(e.type));
+  if (allNoisyType) {
+    return true;
+  }
+
+  // 3) если все урлы сервисные/статические
+  const allNoisyUrl = events.every((e) => {
+    const u = e.to || e.from;
+    return u && isNoisyUrl(u);
+  });
+  if (allNoisyUrl) {
+    return true;
+  }
+
+  return false;
 }
 
 function getHeaderValue(headers = [], headerName) {
-  if (!Array.isArray(headers) || !headerName) {
-    return undefined;
-  }
-
+  if (!Array.isArray(headers) || !headerName) return undefined;
   const target = headerName.toLowerCase();
   const match = headers.find((header) => header?.name?.toLowerCase() === target);
   return match?.value;
@@ -116,45 +208,27 @@ function parseContentLength(value) {
 }
 
 function hasTrackingKeyword(url) {
-  if (!url) {
-    return false;
-  }
-
+  if (!url) return false;
   const lowerUrl = url.toLowerCase();
-  return TRACKING_KEYWORDS.some((keyword) => lowerUrl.includes(keyword));
+  return TRACKING_KEYWORDS.some((kw) => lowerUrl.includes(kw));
 }
 
 function hasPixelExtension(url) {
-  if (!url) {
-    return false;
-  }
-
+  if (!url) return false;
   const lowerUrl = url.toLowerCase();
-  return PIXEL_EXTENSIONS.some((extension) => lowerUrl.endsWith(extension));
+  return PIXEL_EXTENSIONS.some((ext) => lowerUrl.endsWith(ext));
 }
 
 function formatBadgeText(count) {
-  if (!Number.isFinite(count) || count <= 0) {
-    return '';
-  }
-
-  if (count > BADGE_MAX_COUNT) {
-    return `${BADGE_MAX_COUNT}+`;
-  }
-
+  if (!Number.isFinite(count) || count <= 0) return '';
+  if (count > BADGE_MAX_COUNT) return `${BADGE_MAX_COUNT}+`;
   return String(count);
 }
 
 function handleChromePromise(promise, context) {
-  if (!promise || typeof promise.catch !== 'function') {
-    return;
-  }
-
+  if (!promise || typeof promise.catch !== 'function') return;
   promise.catch((error) => {
-    if (error?.message && error.message.includes('No tab with id')) {
-      return;
-    }
-
+    if (error?.message && error.message.includes('No tab with id')) return;
     if (context) {
       console.error(context, error);
     } else {
@@ -164,18 +238,13 @@ function handleChromePromise(promise, context) {
 }
 
 function setBadgeForTab(tabId, hopCount, options = {}) {
-  if (!chrome?.action?.setBadgeText) {
-    return;
-  }
-
-  if (typeof tabId !== 'number' || tabId < 0) {
-    return;
-  }
+  if (!chrome?.action?.setBadgeText) return;
+  if (typeof tabId !== 'number' || tabId < 0) return;
 
   const text = typeof options.text === 'string' ? options.text : formatBadgeText(hopCount);
   try {
-    const result = chrome.action.setBadgeText({ tabId, text });
-    handleChromePromise(result, 'Failed to set badge text');
+    const res = chrome.action.setBadgeText({ tabId, text });
+    handleChromePromise(res, 'Failed to set badge text');
   } catch (error) {
     if (!error?.message || !error.message.includes('No tab with id')) {
       console.error('Failed to set badge text', error);
@@ -186,8 +255,8 @@ function setBadgeForTab(tabId, hopCount, options = {}) {
   if (text && chrome?.action?.setBadgeBackgroundColor) {
     try {
       const color = options.color || BADGE_COLOR;
-      const result = chrome.action.setBadgeBackgroundColor({ tabId, color });
-      handleChromePromise(result, 'Failed to set badge background color');
+      const res = chrome.action.setBadgeBackgroundColor({ tabId, color });
+      handleChromePromise(res, 'Failed to set badge background color');
     } catch (error) {
       if (!error?.message || !error.message.includes('No tab with id')) {
         console.error('Failed to set badge background color', error);
@@ -197,9 +266,7 @@ function setBadgeForTab(tabId, hopCount, options = {}) {
 }
 
 async function clearAllBadges() {
-  if (!chrome?.action?.setBadgeText) {
-    return;
-  }
+  if (!chrome?.action?.setBadgeText) return;
 
   if (!chrome?.tabs?.query) {
     chrome.action.setBadgeText({ text: '' });
@@ -210,10 +277,7 @@ async function clearAllBadges() {
     const tabs = await chrome.tabs.query({});
     await Promise.all(
       tabs.map((tab) => {
-        if (typeof tab.id !== 'number') {
-          return Promise.resolve();
-        }
-
+        if (typeof tab.id !== 'number') return Promise.resolve();
         return chrome.action.setBadgeText({ tabId: tab.id, text: '' });
       })
     );
@@ -223,9 +287,7 @@ async function clearAllBadges() {
 }
 
 function updateBadgeForChain(chain) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   if (chain.awaitingClientRedirect && chain.awaitingClientRedirectDeadline) {
     renderAwaitingBadge(chain);
@@ -237,9 +299,7 @@ function updateBadgeForChain(chain) {
 }
 
 function renderAwaitingBadge(chain, options = {}) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   if (options.toggle) {
     chain.awaitingBadgeToggle = !chain.awaitingBadgeToggle;
@@ -247,9 +307,7 @@ function renderAwaitingBadge(chain, options = {}) {
 
   const hopCount = Array.isArray(chain.events) ? chain.events.length : 0;
 
-  if (typeof chain.tabId !== 'number' || chain.tabId < 0) {
-    return;
-  }
+  if (typeof chain.tabId !== 'number' || chain.tabId < 0) return;
 
   const deadline = typeof chain.awaitingClientRedirectDeadline === 'number' ? chain.awaitingClientRedirectDeadline : null;
   if (!deadline) {
@@ -273,9 +331,7 @@ function renderAwaitingBadge(chain, options = {}) {
 }
 
 function stopAwaitingClientRedirectCountdown(chain) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   if (chain.awaitingClientRedirectInterval) {
     clearInterval(chain.awaitingClientRedirectInterval);
@@ -287,43 +343,42 @@ function stopAwaitingClientRedirectCountdown(chain) {
 }
 
 function updateBadgeForRecord(record) {
-  if (!record) {
-    return;
-  }
-
+  if (!record) return;
   const hopCount = Array.isArray(record.events) ? record.events.length : 0;
   setBadgeForTab(record.tabId, hopCount);
 }
 
 function isLikelyBrowserUrl(url) {
-  if (!url) {
-    return false;
-  }
-
+  if (!url) return false;
+  let parsed;
   try {
-    const parsed = new URL(url);
-    const pathname = (parsed.pathname || '').toLowerCase();
-
-    if (!LIKELY_BROWSER_PROTOCOLS.has(parsed.protocol)) {
-      return false;
-    }
-
-    if (NON_NAVIGABLE_EXTENSIONS.some((extension) => pathname.endsWith(extension))) {
-      return false;
-    }
-
-    return true;
+    parsed = new URL(url);
   } catch (error) {
     return false;
   }
+
+  const pathname = (parsed.pathname || '').toLowerCase();
+  if (!LIKELY_BROWSER_PROTOCOLS.has(parsed.protocol)) {
+    return false;
+  }
+
+  if (NON_NAVIGABLE_EXTENSIONS.some((extension) => pathname.endsWith(extension))) {
+    return false;
+  }
+
+  return true;
 }
 
+function isNoisyFinalCandidate(url) {
+  return isNoisyUrl(url);
+}
+
+// --- resolveFinalUrl ---
 function resolveFinalUrl(record, completionDetails) {
   const completionType = completionDetails?.type;
   const completionUrl = completionDetails?.url;
 
   const candidates = [];
-
   const isNavigationCompletion = completionType === 'main_frame' || completionType === 'sub_frame';
 
   if (isNavigationCompletion && completionUrl) {
@@ -380,7 +435,7 @@ function resolveFinalUrl(record, completionDetails) {
     return fallbackBrowser;
   }
 
-  // 3) просто первый
+  // 3) любой
   if (uniqueCandidates.length > 0) {
     return uniqueCandidates[0];
   }
@@ -403,6 +458,7 @@ function resolveFinalUrl(record, completionDetails) {
   return null;
 }
 
+// --- классификация цепочки ---
 function classifyRecord(record, completionDetails = {}) {
   const heuristics = [];
   const events = Array.isArray(record.events) ? record.events : [];
@@ -425,7 +481,7 @@ function classifyRecord(record, completionDetails = {}) {
   }
 
   if (isNoisyUrl(finalUrl)) {
-    heuristics.push('noisy url (cf/analytics)');
+    heuristics.push('noisy url (cf/analytics/static)');
   }
 
   if (completionDetails.type === 'image') {
@@ -456,7 +512,6 @@ function formatTimestamp(timestampMs) {
   if (typeof timestampMs === 'number') {
     return new Date(timestampMs).toISOString();
   }
-
   return new Date().toISOString();
 }
 
@@ -470,8 +525,9 @@ async function appendRedirectRecord(record) {
   }
 }
 
-// --------- chain lifecycle ---------
-
+// ===================================================================
+//  chain lifecycle
+// ===================================================================
 function createChain(details) {
   const chain = {
     id: crypto.randomUUID(),
@@ -498,9 +554,7 @@ function createChain(details) {
 
 function getChainByRequestId(requestId) {
   const chainId = requestToChain.get(requestId);
-  if (!chainId) {
-    return undefined;
-  }
+  if (!chainId) return undefined;
   return chainsById.get(chainId);
 }
 
@@ -540,9 +594,7 @@ function getClientRedirectAwaitTimeout(details) {
 }
 
 function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   cancelAwaitingClientRedirect(chain);
 
@@ -598,9 +650,7 @@ function startAwaitingClientRedirect(chain, fromUrl, timeoutMs) {
 }
 
 function startCleanupTimer(chain) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   if (chain.cleanupTimer) {
     clearTimeout(chain.cleanupTimer);
@@ -612,9 +662,7 @@ function startCleanupTimer(chain) {
 }
 
 function cleanupChain(chain) {
-  if (!chain) {
-    return;
-  }
+  if (!chain) return;
 
   if (chain.finalizeTimer) {
     clearTimeout(chain.finalizeTimer);
@@ -634,7 +682,7 @@ function cleanupChain(chain) {
     chain.cleanupTimer = null;
   }
 
-  // чистим все ключи, под которые мы подписывались
+  // вычищаем все подписки на целевые урлы
   if (chain.pendingRedirectTargetKeys?.size) {
     for (const key of chain.pendingRedirectTargetKeys) {
       const queue = pendingRedirectTargets.get(key);
@@ -642,7 +690,6 @@ function cleanupChain(chain) {
         pendingRedirectTargets.delete(key);
         continue;
       }
-
       const filtered = queue.filter((chainId) => chainId !== chain.id);
       if (filtered.length === 0) {
         pendingRedirectTargets.delete(key);
@@ -650,16 +697,14 @@ function cleanupChain(chain) {
         pendingRedirectTargets.set(key, filtered);
       }
     }
-
     chain.pendingRedirectTargetKeys.clear();
   }
 
-  // чистим маппинг requestId → chain
+  // удаляем маппинг requestId → chain
   for (const requestId of chain.requestIds) {
     requestToChain.delete(requestId);
   }
 
-  // чистим табы
   if (typeof chain.tabId === 'number' && chain.tabId >= 0) {
     const current = tabChains.get(chain.tabId);
     if (current === chain.id) {
@@ -716,26 +761,22 @@ async function finalizeChainRecord(chainId) {
   const { details, errorMessage } = completion;
   const completedAt = formatTimestamp(details.timeStamp);
 
-  // 1. сортируем как есть
+  // сортируем по времени
   const sortedEventsRaw = chain.events
     .slice()
     .sort((a, b) => {
       const timeA = typeof a.timestampMs === 'number' ? a.timestampMs : Number.POSITIVE_INFINITY;
       const timeB = typeof b.timestampMs === 'number' ? b.timestampMs : Number.POSITIVE_INFINITY;
-      if (timeA === timeB) {
-        return 0;
-      }
+      if (timeA === timeB) return 0;
       return timeA - timeB;
     });
 
-  // 2. делим на шумные и нормальные
+  // делим на шумные и нормальные
   const noisyEvents = sortedEventsRaw.filter((e) => e?.noise === true);
   const nonNoisyEvents = sortedEventsRaw.filter((e) => !e?.noise);
 
-  // 3. основной список — только нормальные, если они есть
   const eventsForRecord = nonNoisyEvents.length > 0 ? nonNoisyEvents : sortedEventsRaw;
 
-  // 4. нормализуем
   const normalizedEvents = eventsForRecord.map((event) => ({
     timestamp:
       typeof event.timestampMs === 'number'
@@ -767,7 +808,7 @@ async function finalizeChainRecord(chainId) {
     events: normalizedEvents
   };
 
-  // 5. отдаём шум отдельно
+  // добавим шум отдельно
   if (noisyEvents.length > 0) {
     record.noiseEvents = noisyEvents.map((event) => ({
       timestamp:
@@ -787,10 +828,10 @@ async function finalizeChainRecord(chainId) {
     }));
   }
 
-  // 6. финальный URL по очищенному списку
+  // финальный URL
   record.finalUrl = resolveFinalUrl(record, details);
 
-  // 7. классификация
+  // классифицируем
   const classification = classifyRecord(record, details);
   record.classification = classification.classification;
   if (classification.classificationReason) {
@@ -805,7 +846,7 @@ async function finalizeChainRecord(chainId) {
 
   chain.pendingFinalDetails = null;
 
-  // 8. если в итоге всё равно всё шумное — не пишем
+  // если всё шум — не пишем
   const allEventsNoisy =
     Array.isArray(record.events) &&
     record.events.length > 0 &&
@@ -816,16 +857,14 @@ async function finalizeChainRecord(chainId) {
     updateBadgeForRecord(record);
   }
 
-  // 9. чистим
   cleanupChain(chain);
 }
 
-// --------- attach / record / consume ---------
-
+// ===================================================================
+//  attach / record / consume
+// ===================================================================
 function attachRequestToChain(chain, details) {
-  if (!chain || !details) {
-    return chain;
-  }
+  if (!chain || !details) return chain;
 
   if (!chain.requestIds.has(details.requestId)) {
     chain.requestIds.add(details.requestId);
@@ -867,7 +906,6 @@ function recordRedirectEvent(details) {
     if (keys) {
       const { tabKey, anyKey } = keys;
 
-      // точный ключ всегда
       if (tabKey) {
         const q1 = pendingRedirectTargets.get(tabKey) || [];
         q1.push(chain.id);
@@ -897,7 +935,21 @@ function recordRedirectEvent(details) {
     type: details.type
   };
 
-  const classifiedEvent = classifyEventLikeHop(rawEvent);
+  // помечаем как hop (с проверкой на шум)
+  const classifiedEvent = (() => {
+    const e = { ...rawEvent };
+    e.noise = false;
+    e.noiseReason = null;
+    if (e.to && isNoisyUrl(e.to)) {
+      e.noise = true;
+      if (e.to.includes('/cdn-cgi/')) {
+        e.noiseReason = 'cloudflare-challenge';
+      } else {
+        e.noiseReason = 'analytics';
+      }
+    }
+    return e;
+  })();
 
   chain.events.push(classifiedEvent);
 
@@ -914,7 +966,7 @@ async function finalizeChain(details, errorMessage) {
     return;
   }
 
-  // 👇 главное: если мы уже ждём JS, не даём пикселю перезаписать финал
+  // если ждём JS — не даём пикселю перезаписать финал
   if (
     chain.awaitingClientRedirect &&
     details &&
@@ -936,7 +988,6 @@ async function finalizeChain(details, errorMessage) {
     details.tabId >= 0 &&
     (!details.type || CLIENT_REDIRECT_AWAIT_TYPES.has(details.type));
 
-  // проверяем, может ли страница инициировать JS-редирект
   const contentType = getHeaderValue(details.responseHeaders, 'content-type') || '';
   const isHtmlPage =
     typeof contentType === 'string' &&
@@ -952,12 +1003,9 @@ async function finalizeChain(details, errorMessage) {
   }
 }
 
-// ВАЖНО: теперь возвращаем ДВА ключа (точный и общий)
+// создаём ключи для подписки на будущий URL
 function createRedirectTargetKey(tabId, url) {
-  if (!url) {
-    return null;
-  }
-
+  if (!url) return null;
   const hasTab = typeof tabId === 'number' && tabId >= 0;
   const tabKey = `${hasTab ? tabId : 'no-tab'}::${url}`;
   const anyKey = `any-tab::${url}`;
@@ -1006,17 +1054,14 @@ function consumePendingRedirectTarget(details) {
 
   const { tabKey, anyKey } = keys;
 
-  // 1. точное совпадение по табу
+  // 1. точное по табу
   let chain = consumeQueueByKey(tabKey);
   if (chain) return chain;
 
-  // 2. пробуем общий, но только если хосты совпадают
+  // 2. общий — только если хосты совпадают
   chain = consumeQueueByKey(anyKey);
   if (chain) {
-    // если у цепочки уже есть initialUrl и он с другим хостом — не берём
     if (chain.initialUrl && !sameHost(chain.initialUrl, details.url)) {
-      // вернём в очередь и скажем "нет кандидата"
-      // (можно просто не возвращать — мы всё равно чистим по таймауту)
       return null;
     }
     return chain;
@@ -1025,9 +1070,9 @@ function consumePendingRedirectTarget(details) {
   return null;
 }
 
-
-// --------- webRequest handlers ---------
-
+// ===================================================================
+//  webRequest handlers
+// ===================================================================
 function handleBeforeRedirect(details) {
   try {
     recordRedirectEvent(details);
@@ -1039,12 +1084,11 @@ function handleBeforeRedirect(details) {
 function handleBeforeRequest(details) {
   try {
     let chain = getChainByRequestId(details.requestId);
-
     if (!chain) {
       chain = consumePendingRedirectTarget(details);
     }
 
-    // клиентский редирект (JS) → создаём хоп вручную
+    // main_frame пошёл по клиентскому редиректу
     if (!chain && typeof details.tabId === 'number' && details.tabId >= 0 && details.type === 'main_frame') {
       const pending = pendingClientRedirects.get(details.tabId);
       if (pending) {
@@ -1068,7 +1112,17 @@ function handleBeforeRequest(details) {
             method: 'CLIENT',
             type: 'client-redirect'
           };
-          const classifiedClientEvent = classifyEventLikeHop(rawClientEvent);
+
+          const classifiedClientEvent = (() => {
+            const e = { ...rawClientEvent };
+            e.noise = false;
+            e.noiseReason = null;
+            if (e.to && isNoisyUrl(e.to)) {
+              e.noise = true;
+              e.noiseReason = 'analytics';
+            }
+            return e;
+          })();
 
           candidate.events.push(classifiedClientEvent);
 
@@ -1117,6 +1171,23 @@ function cleanupTabState(tabId) {
   pendingClientRedirects.delete(tabId);
   setBadgeForTab(tabId, 0);
 
+  // подчистим все очереди, завязанные на этот таб
+  for (const [key, queue] of pendingRedirectTargets.entries()) {
+    if (key.startsWith(`${tabId}::`)) {
+      pendingRedirectTargets.delete(key);
+      continue;
+    }
+    const filtered = queue.filter((chainId) => {
+      const c = chainsById.get(chainId);
+      return c && c.tabId !== tabId;
+    });
+    if (filtered.length === 0) {
+      pendingRedirectTargets.delete(key);
+    } else {
+      pendingRedirectTargets.set(key, filtered);
+    }
+  }
+
   const chainId = tabChains.get(tabId);
   if (!chainId) {
     return;
@@ -1130,18 +1201,28 @@ function cleanupTabState(tabId) {
   }
 }
 
-// ---- EVENT REGISTRATION ----
+// ===================================================================
+//  EVENT REGISTRATION
+// ===================================================================
 try {
   if (chrome?.webRequest?.onBeforeRequest) {
     chrome.webRequest.onBeforeRequest.addListener(handleBeforeRequest, WEB_REQUEST_FILTER);
   }
 
   if (chrome?.webRequest?.onBeforeRedirect) {
-    chrome.webRequest.onBeforeRedirect.addListener(handleBeforeRedirect, WEB_REQUEST_FILTER, WEB_REQUEST_EXTRA_INFO_SPEC);
+    chrome.webRequest.onBeforeRedirect.addListener(
+      handleBeforeRedirect,
+      WEB_REQUEST_FILTER,
+      WEB_REQUEST_EXTRA_INFO_SPEC
+    );
   }
 
   if (chrome?.webRequest?.onCompleted) {
-    chrome.webRequest.onCompleted.addListener(handleRequestCompleted, WEB_REQUEST_FILTER, WEB_REQUEST_EXTRA_INFO_SPEC);
+    chrome.webRequest.onCompleted.addListener(
+      handleRequestCompleted,
+      WEB_REQUEST_FILTER,
+      WEB_REQUEST_EXTRA_INFO_SPEC
+    );
   }
 
   if (chrome?.webRequest?.onErrorOccurred) {
@@ -1157,16 +1238,13 @@ if (chrome?.webNavigation?.onCommitted) {
       return;
     }
 
-    // запоминаем последний реально открытый URL в табе
     tabLastCommittedUrl.set(details.tabId, details.url);
 
-    // это главный фрейм — тут и ловим JS/мета-редиректы
     if (details.frameId === 0) {
       const pending = pendingClientRedirects.get(details.tabId);
       if (pending) {
         const chain = chainsById.get(pending.chainId);
         if (chain && chain.awaitingClientRedirect) {
-          // проверка на "откат" на тот же урл
           const lastNonNoisy = [...chain.events].reverse().find((e) => !e.noise && e.to);
           const lastTarget = lastNonNoisy?.to || chain.events.at(-1)?.to;
 
@@ -1180,27 +1258,34 @@ if (chrome?.webNavigation?.onCommitted) {
           }
 
           if (!isBackwardHop) {
-            const clientHop = classifyEventLikeHop({
+            const clientHop = {
               timestamp: formatTimestamp(details.timeStamp),
               timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
-              from: pending.fromUrl ||
+              from:
+                pending.fromUrl ||
                 chain.pendingFinalDetails?.details?.url ||
                 chain.events.at(-1)?.to ||
                 chain.initialUrl,
               to: details.url,
               statusCode: 'JS',
               method: 'CLIENT',
-              type: 'client-redirect'
-            });
+              type: 'client-redirect',
+              noise: false,
+              noiseReason: null
+            };
+
+            if (clientHop.to && isNoisyUrl(clientHop.to)) {
+              clientHop.noise = true;
+              clientHop.noiseReason = 'analytics';
+            }
 
             chain.events.push(clientHop);
           }
 
-          // мы получили реальный финал → можем завершать
           cancelAwaitingClientRedirect(chain);
           chain.pendingFinalDetails = {
             details: {
-              requestId: chain.id, // фиктивный requestId, нам уже не важен
+              requestId: chain.id,
               tabId: details.tabId,
               url: details.url,
               type: 'main_frame',
@@ -1213,12 +1298,10 @@ if (chrome?.webNavigation?.onCommitted) {
           scheduleChainFinalization(chain);
         }
 
-        // в любом случае этот pending нам больше не нужен
         pendingClientRedirects.delete(details.tabId);
       }
     }
 
-    // обновляем бейдж по активной цепочке, если есть
     const activeChainId = tabChains.get(details.tabId);
     if (activeChainId) {
       const activeChain = chainsById.get(activeChainId);
@@ -1228,7 +1311,6 @@ if (chrome?.webNavigation?.onCommitted) {
       }
     }
 
-    // если цепочки нет — просто очистим бейдж
     setBadgeForTab(details.tabId, 0);
   });
 }
@@ -1239,7 +1321,9 @@ if (chrome?.tabs?.onRemoved) {
   });
 }
 
-// ---- RUNTIME MESSAGES (popup <-> background) ----
+// ===================================================================
+//  RUNTIME MESSAGES (popup <-> background)
+// ===================================================================
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = message && message.type;
 

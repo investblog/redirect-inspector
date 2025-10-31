@@ -1,4 +1,5 @@
 // src/popup/popup.js
+
 const statusEl = document.getElementById('status');
 const redirectListEl = document.getElementById('redirect-list');
 const template = document.getElementById('redirect-item-template');
@@ -11,7 +12,63 @@ const REDIRECT_LOG_KEY = 'redirectLog';
 
 let allRedirectRecords = [];
 
-// -------- messaging --------
+// ===================================================================
+//  ЕДИНЫЙ СПИСОК СЕРВИСНЫХ / ШУМНЫХ ХОСТОВ И ПУТЕЙ
+//  (должен совпадать с background/service-worker.js)
+// ===================================================================
+const NOISY_HOSTS = [
+  'cloudflareinsights.com',
+  'cf-ns.com',
+  'cdn.cloudflare.net',
+  'www.googletagmanager.com',
+  'googletagmanager.com',
+  'www.google-analytics.com',
+  'google-analytics.com',
+  'stats.g.doubleclick.net',
+  'connect.facebook.net',
+  'graph.facebook.com',
+  'www.facebook.com',
+  'mc.yandex.ru',
+  'yastatic.net',
+  'yandex.ru',
+  'safeframe.yastatic.net',
+  'vk.com',
+  'api.vk.com',
+  'id.vk.com',
+  'auth.mail.ru',
+  'doubleclick.net',
+  'ads.pubmatic.com',
+  'strm.yandex.net'
+];
+
+const NOISY_PATH_PARTS = [
+  '/cdn-cgi/challenge-platform/',
+  '/cdn-cgi/challenge/',
+  '/cdn-cgi/bm/',
+  '/cdn-cgi/trace',
+  '/cdn-cgi/zaraz/',
+  '/cdn-cgi/scripts/',
+  '/safeframe-bundles/',
+  '/gtm.js',
+  '/analytics.js'
+];
+
+const NOISY_RESOURCE_TYPES = new Set([
+  'media',
+  'script',
+  'stylesheet',
+  'font',
+  'imageset',
+  'object',
+  'other',
+  'ping',
+  'csp_report',
+  'xmlhttprequest'
+]);
+
+// -------------------------------------------------------------------
+// безопасное сообщение в бэкграунд
+// -------------------------------------------------------------------
 function sendMessageSafe(message) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(message, (response) => {
@@ -32,7 +89,57 @@ function showStatus(message, type = 'info') {
   statusEl.hidden = !message;
 }
 
-// -------- noise helpers --------
+// -------------------------------------------------------------------
+//   noise helpers
+// -------------------------------------------------------------------
+function isNoisyUrl(raw) {
+  if (!raw) return false;
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  const host = u.hostname;
+  if (NOISY_HOSTS.some((svc) => host === svc || host.endsWith('.' + svc))) {
+    return true;
+  }
+  const path = u.pathname || '';
+  if (NOISY_PATH_PARTS.some((part) => path.includes(part))) {
+    return true;
+  }
+  return false;
+}
+
+function isNoisyRecord(record) {
+  if (!record) return false;
+
+  // если бэкграунд уже пометил
+  if (record.classification === 'likely-tracking') {
+    return true;
+  }
+
+  const events = Array.isArray(record.events) ? record.events : [];
+  if (!events.length) return false;
+
+  // все шаги — тех.типы
+  const allNoisyType = events.every((e) => e.type && NOISY_RESOURCE_TYPES.has(e.type));
+  if (allNoisyType) {
+    return true;
+  }
+
+  // все урлы — сервисные
+  const allNoisyUrl = events.every((e) => {
+    const u = e.to || e.from;
+    return u && isNoisyUrl(u);
+  });
+  if (allNoisyUrl) {
+    return true;
+  }
+
+  return false;
+}
+
 function countNoiseEvents(records) {
   if (!Array.isArray(records)) return 0;
   let total = 0;
@@ -48,37 +155,39 @@ function updateNoiseSummary(totalRecords, visibleRecords, showingNoise) {
   if (!noiseSummaryEl) return;
 
   const totalNoise = countNoiseEvents(allRedirectRecords);
-  const hiddenCount = totalRecords - visibleRecords;
 
-  if (showingNoise || (hiddenCount <= 0 && totalNoise === 0)) {
+  if (showingNoise || totalRecords === visibleRecords) {
     noiseSummaryEl.hidden = true;
     noiseSummaryEl.textContent = '';
     return;
   }
+
+  const hidden = totalRecords - visibleRecords;
 
   noiseSummaryEl.hidden = false;
 
   if (totalNoise > 0) {
     noiseSummaryEl.textContent =
       totalNoise === 1
-        ? '1 service/analytics request hidden'
-        : `${totalNoise} service/analytics requests hidden`;
+        ? '1 service / media / analytics request hidden'
+        : `${totalNoise} service / media / analytics requests hidden`;
     return;
   }
 
   noiseSummaryEl.textContent =
-    hiddenCount === 1
-      ? '1 likely tracking request hidden'
-      : `${hiddenCount} likely tracking requests hidden`;
+    hidden === 1
+      ? '1 service / media / analytics request hidden'
+      : `${hidden} service / media / analytics requests hidden`;
 }
 
-// -------- filtering --------
+// -------------------------------------------------------------------
+//   фильтрация
+// -------------------------------------------------------------------
 function applyFilters(records) {
   const safeRecords = Array.isArray(records) ? records : [];
   const showingNoise = Boolean(showNoiseToggle?.checked);
-  const filtered = showingNoise
-    ? safeRecords
-    : safeRecords.filter((record) => record.classification !== 'likely-tracking');
+
+  const filtered = showingNoise ? safeRecords : safeRecords.filter((record) => !isNoisyRecord(record));
 
   renderRedirectLog(filtered);
   updateNoiseSummary(safeRecords.length, filtered.length, showingNoise);
@@ -99,7 +208,7 @@ function updateStatusForRecords({ total, visible, hidden, showingNoise }) {
 
   if (!showingNoise && visible === 0 && hidden > 0) {
     showStatus(
-      'Only tracking pixel requests were captured. Enable "Show pixel & analytics requests" to inspect them.',
+      'Only tracking / service requests were captured. Enable "Show pixel & analytics requests" to inspect them.',
       'info'
     );
     return;
@@ -137,41 +246,30 @@ async function handleShowNoiseChange() {
   updateStatusForRecords(context);
 }
 
-// -------- formatting utils --------
+// -------------------------------------------------------------------
+//   утилиты форматирования
+// -------------------------------------------------------------------
 function formatUrl(url) {
-  if (!url) return 'Unknown URL';
+  if (!url) {
+    return 'Unknown URL';
+  }
+
   try {
     const parsed = new URL(url);
     const path =
       parsed.pathname.endsWith('/') && parsed.pathname !== '/' ? parsed.pathname.slice(0, -1) : parsed.pathname;
     const formattedPath = path === '' ? '/' : path;
     return `${parsed.origin}${formattedPath}${parsed.search}`;
-  } catch {
+  } catch (error) {
     return url;
   }
 }
 
-function formatUrlSafe(raw) {
-  if (!raw) return 'Unknown URL';
-  try {
-    const u = new URL(raw);
-    const path = u.pathname.endsWith('/') && u.pathname !== '/' ? u.pathname.slice(0, -1) : u.pathname;
-    return `${u.origin}${path === '' ? '/' : path}${u.search}`;
-  } catch {
-    return raw;
-  }
-}
-
-function getHost(raw) {
-  try {
-    return new URL(raw).host;
-  } catch {
-    return '';
-  }
-}
-
 function describeTab(tabId) {
-  return typeof tabId === 'number' && tabId >= 0 ? `Tab ${tabId}` : 'Background';
+  if (typeof tabId === 'number' && tabId >= 0) {
+    return `Tab ${tabId}`;
+  }
+  return 'Background';
 }
 
 function describeHops(count) {
@@ -180,7 +278,28 @@ function describeHops(count) {
   return `${count} hops`;
 }
 
-// -------- export --------
+// -------------------------------------------------------------------
+//   экспорт / копирование
+// -------------------------------------------------------------------
+function formatUrlSafe(raw) {
+  if (!raw) return 'Unknown URL';
+  try {
+    const u = new URL(raw);
+    const path = u.pathname.endsWith('/') && u.pathname !== '/' ? u.pathname.slice(0, -1) : u.pathname;
+    return `${u.origin}${path === '' ? '/' : path}${u.search}`;
+  } catch (e) {
+    return raw;
+  }
+}
+
+function getHost(raw) {
+  try {
+    return new URL(raw).host;
+  } catch (e) {
+    return '';
+  }
+}
+
 function normalizeEventsForExport(record) {
   return Array.isArray(record?.events) ? record.events : [];
 }
@@ -202,7 +321,9 @@ function squashClientNoise(events) {
     const next = events[i + 1];
 
     const isClient =
-      step.method === 'CLIENT' || step.type === 'client-redirect' || step.statusCode === 'JS';
+      step.method === 'CLIENT' ||
+      step.type === 'client-redirect' ||
+      step.statusCode === 'JS';
 
     let drop = false;
 
@@ -229,12 +350,13 @@ function formatRedirectChainForExport(record) {
   const rawEvents = normalizeEventsForExport(record);
   const events = squashClientNoise(rawEvents);
 
-  // доп. сжатие по host
+  // склеим подряд идущие переходы на один и тот же хост
   const compact = [];
   for (const step of events) {
     const last = compact[compact.length - 1];
     const curHost = getHost(step.to || step.from);
     const lastHost = last ? getHost(last.to || last.from) : null;
+
     if (last && curHost && lastHost && curHost === lastHost) {
       continue;
     }
@@ -269,14 +391,21 @@ function formatRedirectChainForExport(record) {
 
 async function copyRedirectChain(record, triggerButton) {
   const summary = formatRedirectChainForExport(record);
+
   try {
+    if (!navigator?.clipboard?.writeText) {
+      throw new Error('Clipboard API is not available.');
+    }
+
     await navigator.clipboard.writeText(summary);
+
     if (triggerButton) {
       const originalTitle = triggerButton.title;
       triggerButton.title = 'Copied!';
       triggerButton.setAttribute('aria-label', 'Copied!');
       triggerButton.classList.add('redirect-item__copy--success');
       triggerButton.disabled = true;
+
       setTimeout(() => {
         triggerButton.disabled = false;
         triggerButton.title = originalTitle;
@@ -288,6 +417,29 @@ async function copyRedirectChain(record, triggerButton) {
     console.error('Failed to copy redirect chain', error);
     showStatus('Failed to copy redirect chain to clipboard.', 'error');
   }
+}
+
+// -------------------------------------------------------------------
+//   шаги
+// -------------------------------------------------------------------
+function normalizeEvents(record) {
+  if (Array.isArray(record.events) && record.events.length > 0) {
+    return record.events;
+  }
+
+  if (record.url && record.redirectUrl) {
+    return [
+      {
+        from: record.url,
+        to: record.redirectUrl,
+        statusCode: record.statusCode,
+        method: record.method,
+        timestamp: record.timestamp
+      }
+    ];
+  }
+
+  return [];
 }
 
 // -------- render steps --------
@@ -347,28 +499,11 @@ function renderRedirectStep(step) {
   return li;
 }
 
-function normalizeEvents(record) {
-  if (Array.isArray(record.events) && record.events.length > 0) return record.events;
-
-  if (record.url && record.redirectUrl) {
-    return [
-      {
-        from: record.url,
-        to: record.redirectUrl,
-        statusCode: record.statusCode,
-        method: record.method,
-        timestamp: record.timestamp
-      }
-    ];
-  }
-
-  return [];
-}
-
-// -------- noise section --------
+// ---- рендер служебных запросов ----
 function renderNoiseSection(record, containerEl) {
   const events = normalizeEvents(record);
   const noisy = events.filter((e) => e.noise);
+
   if (!noisy.length) return;
 
   const block = document.createElement('div');
@@ -402,16 +537,16 @@ function renderNoiseSection(record, containerEl) {
   containerEl.appendChild(block);
 }
 
-// -------- render item --------
 function renderRedirectItem(record) {
   const clone = template.content.cloneNode(true);
 
-  const events = normalizeEvents(record);
-
   const titleEl = clone.querySelector('.redirect-item__title');
-  const titleUrl = pickTitleUrl(record, events);
-  titleEl.textContent = formatUrl(titleUrl);
-  titleEl.title = titleUrl;
+  const events = normalizeEvents(record);
+  const finalUrl = record.finalUrl || events.at(-1)?.to || record.initialUrl;
+  titleEl.textContent = formatUrl(finalUrl || record.initialUrl || 'Unknown URL');
+  if (finalUrl) {
+    titleEl.title = finalUrl;
+  }
 
   const timestampEl = clone.querySelector('.redirect-item__timestamp');
   const completedAt = record.completedAt || events.at(-1)?.timestamp || record.initiatedAt;
@@ -421,9 +556,11 @@ function renderRedirectItem(record) {
   tabEl.textContent = describeTab(record.tabId);
 
   const hopsEl = clone.querySelector('.redirect-item__hops');
-  hopsEl.textContent = describeHops(events.length);
+  const hopCount = events.length;
+  hopsEl.textContent = describeHops(hopCount);
 
   const metaEl = clone.querySelector('.redirect-item__meta');
+
   if (record.initiator) {
     const initiatorEl = document.createElement('span');
     initiatorEl.className = 'redirect-item__initiator';
@@ -436,7 +573,9 @@ function renderRedirectItem(record) {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';
     classificationEl.textContent = 'Likely tracking pixel';
-    if (record.classificationReason) classificationEl.title = record.classificationReason;
+    if (record.classificationReason) {
+      classificationEl.title = record.classificationReason;
+    }
     metaEl.appendChild(classificationEl);
   }
 
@@ -462,12 +601,20 @@ function renderRedirectItem(record) {
     footerEl.hidden = false;
   } else if (record.finalStatus) {
     footerEl.textContent = `Completed with status ${record.finalStatus}`;
-    const code = Number(record.finalStatus);
-    if (Number.isFinite(code)) {
-      if (code >= 200 && code < 300) footerEl.dataset.type = 'success';
-      else if (code >= 400) footerEl.dataset.type = 'error';
-      else footerEl.dataset.type = 'warning';
+
+    const statusCode = Number(record.finalStatus);
+    if (Number.isFinite(statusCode)) {
+      if (statusCode >= 200 && statusCode < 300) {
+        footerEl.dataset.type = 'success';
+      } else if (statusCode >= 400) {
+        footerEl.dataset.type = 'error';
+      } else {
+        footerEl.dataset.type = 'warning';
+      }
+    } else {
+      delete footerEl.dataset.type;
     }
+
     footerEl.hidden = false;
   } else {
     footerEl.remove();
@@ -476,30 +623,6 @@ function renderRedirectItem(record) {
   return clone;
 }
 
-// helper for title
-function sameHost(a, b) {
-  try {
-    return new URL(a).host === new URL(b).host;
-  } catch {
-    return false;
-  }
-}
-
-function pickTitleUrl(record, events) {
-  if (record.finalUrl) return record.finalUrl;
-
-  const last = events.at(-1);
-  if (last?.to) return last.to;
-  if (last?.from) return last.from;
-
-  if (record.initialUrl && last?.to && sameHost(record.initialUrl, last.to)) {
-    return record.initialUrl;
-  }
-
-  return record.initialUrl || 'Unknown URL';
-}
-
-// -------- render list --------
 function renderRedirectLog(records) {
   redirectListEl.innerHTML = '';
   records.forEach((record) => {
@@ -507,7 +630,9 @@ function renderRedirectLog(records) {
   });
 }
 
-// -------- load / clear --------
+// -------------------------------------------------------------------
+//   загрузка / очистка
+// -------------------------------------------------------------------
 async function fetchRedirectLog() {
   showStatus('Loading redirect chains…', 'info');
 
@@ -555,18 +680,23 @@ async function clearRedirectLog() {
   }
 }
 
-// -------- init --------
+// -------------------------------------------------------------------
+//   init
+// -------------------------------------------------------------------
 clearButton.addEventListener('click', clearRedirectLog);
 
 if (showNoiseToggle) {
   showNoiseToggle.addEventListener('change', handleShowNoiseChange);
 }
 
+async function initializePopup() {
+  await loadNoisePreference();
+  updateNoiseSummary(allRedirectRecords.length, allRedirectRecords.length, Boolean(showNoiseToggle?.checked));
+  await fetchRedirectLog();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  (async () => {
-    await loadNoisePreference();
-    await fetchRedirectLog();
-  })().catch((error) => {
+  initializePopup().catch((error) => {
     console.error('Failed to initialize popup', error);
     showStatus('Failed to initialize popup', 'error');
   });
