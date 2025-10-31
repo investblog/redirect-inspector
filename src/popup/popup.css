@@ -6,8 +6,8 @@ font-size: 14px;
 body {
 margin: 0;
 padding: 0.75rem;
-min-width: 420px; /* было 340px */
-max-width: 640px; /* на будущее */
+min-width: 420px; /* было 340px /
+max-width: 640px; / на будущее */
 background-color: #f5f5f5;
 color: #1f2933;
 }
@@ -241,7 +241,7 @@ font-size: 1.05rem;
 line-height: 1;
 }
 .redirect-step__col--mid .redirect-step__arrow.js {
-color: #2563eb; /* синий оттенок для client redirect */
+  color: #2563eb; /* синий оттенок для client redirect */
 }
 .redirect-step__meta {
 font-size: 0.65rem;
