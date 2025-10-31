@@ -262,3 +262,50 @@ line-height: 1.1;
 max-width: 6rem;
 word-break: break-word;
 }
+/* бейджи в логах */
+.redirect-item__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(94, 139, 255, 0.12);
+  border: 1px solid rgba(94, 139, 255, 0.4);
+  color: #5e8bff;
+  border-radius: 999px;
+  padding: 2px 8px 2px 6px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* состояние "ждём редирект" */
+.redirect-item__badge--pending {
+  background: rgba(255, 184, 77, 0.12);
+  border-color: rgba(255, 184, 77, 0.55);
+  color: #ffb84d;
+  position: relative;
+}
+
+/* сам спиннер */
+.redirect-item__badge--pending::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  display: inline-block;
+  animation: ri-spin 0.8s linear infinite;
+}
+
+@keyframes ri-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* если хочешь отличать "client-side" ожидание — можно по классу на корне */
+.redirect-item--pending .redirect-item__footer[data-type="info"] {
+  background: rgba(94, 139, 255, 0.04);
+  border-left: 3px solid rgba(94, 139, 255, 0.6);
+  padding-left: 8px;
+}
