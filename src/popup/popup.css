@@ -303,9 +303,46 @@ word-break: break-word;
   }
 }
 
-/* если хочешь отличать "client-side" ожидание — можно по классу на корне */
 .redirect-item--pending .redirect-item__footer[data-type="info"] {
   background: rgba(94, 139, 255, 0.04);
   border-left: 3px solid rgba(94, 139, 255, 0.6);
   padding-left: 8px;
+}
+
+header.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.brand-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 0.5rem;
+/*  background: rgba(94, 139, 255, 0.12);*/
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.topbar h1 {
+  font-size: 1.1rem;
+  margin: 0;
+  white-space: nowrap;
 }
