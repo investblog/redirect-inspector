@@ -1,6 +1,13 @@
 # Redirect Inspector
 
-Redirect Inspector is a lightweight Chrome Extension that captures redirect chains in real-time so you can understand how a browser request eventually lands on its destination. It is particularly useful for QA specialists, SEO experts, and developers investigating unexpected navigation flows.
+Redirect Inspector is a lightweight browser extension that captures redirect chains in real-time so you can understand how a browser request eventually lands on its destination. It is particularly useful for QA specialists, SEO experts, and developers investigating unexpected navigation flows.
+
+## Install
+
+- [Chrome Web Store](https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg)
+- [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/redirect-inspector/ckblhiaefgkhpgilekhcpapnkpihdlaa)
+
+Learn more about the project (and the upcoming free Traffic Delivery System) at [301.st](https://301.st).
 
 ## Features (MVP)
 
@@ -35,7 +42,7 @@ redirect-inspector/
 
 ## Versioning
 
-This repository follows semantic versioning aligned with the Chrome extension manifest. The current version is **1.1.0**, reflecting the clipboard export release. Future updates should increment the manifest version and document notable changes in this README.
+This repository follows semantic versioning aligned with the extension manifest. The current version is **1.1.0**, which introduces clipboard export for redirect chains and refreshed documentation. Future updates should increment the manifest version and document notable changes in this README.
 
 ## Release History
 
