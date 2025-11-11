@@ -13,6 +13,9 @@ Learn more about the project (and the upcoming free Traffic Delivery System) at 
 
 - 🧭 Records redirect chains as they happen using the `webRequest` API.
 - 🧩 Groups multiple hops from the same request so you can follow the entire chain.
+- 🧪 Shows in-progress redirect chains instantly while the network request is still pending.
+- 🧼 Deduplicates identical hops so each redirect appears only once.
+- 🎛️ Hides pixel, analytics, and media requests by default—with a toggle to reveal them when needed.
 - 🗂️ Stores the most recent 50 redirect chains for quick reference.
 - 🧹 Allows clearing the stored log with a single click.
 - 📋 Presents key details for each hop (origin, destination, HTTP status, method, tab, initiator).
@@ -42,10 +45,11 @@ redirect-inspector/
 
 ## Versioning
 
-This repository follows semantic versioning aligned with the extension manifest. The current version is **1.1.0**, which introduces clipboard export for redirect chains and refreshed documentation. Future updates should increment the manifest version and document notable changes in this README.
+This repository follows semantic versioning aligned with the extension manifest. The current version is **1.2.0**, which introduces instant in-progress log updates, duplicate-hop cleanup, and a noise filter toggle. Future updates should increment the manifest version and document notable changes in this README.
 
 ## Release History
 
+- **1.2.0** — Show in-progress redirects instantly, hide noisy pixel/media hops by default, and deduplicate identical hops.
 - **1.1.0** — Added clipboard export for redirect chains and refreshed documentation.
 - **1.0.0** — Initial MVP release.
 
