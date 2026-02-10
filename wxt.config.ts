@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Redirect Inspector',
     description: 'Inspect and visualize redirect chains directly in your browser.',
-    version: '2.0.1',
+    version: '2.0.2',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
 
@@ -32,6 +32,9 @@ export default defineConfig({
         gecko: {
           id: 'redirect-inspector@301.st',
           strict_min_version: '109.0',
+          data_collection_permissions: {
+            required: ['none'],
+          },
         },
       },
     }),
