@@ -3,8 +3,8 @@ export const REDIRECT_LOG_KEY = 'redirectLog';
 export const MAX_RECORDS = 50;
 export const ACTIVE_CHAIN_TIMEOUT_MS = 5 * 60 * 1000;
 
-export const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 10 * 1000;
-export const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 15 * 1000;
+export const CLIENT_REDIRECT_DEFAULT_AWAIT_MS = 3 * 1000;
+export const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 5 * 1000;
 
 export const CHAIN_FINALIZATION_DELAY_MS = 250;
 

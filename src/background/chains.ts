@@ -531,12 +531,18 @@ export function recordRedirectEvent(details: chrome.webRequest.WebRedirectionRes
     }
   }
 
+  // Chrome reports statusCode 0 for internal redirects (HSTS http→https upgrade)
+  const isInternalRedirect =
+    details.statusCode === 0 &&
+    details.url.startsWith('http://') &&
+    details.redirectUrl?.startsWith('https://');
+
   const rawEvent: RedirectEvent = {
     timestamp: formatTimestamp(details.timeStamp),
     timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
     from: details.url,
     to: details.redirectUrl,
-    statusCode: details.statusCode,
+    statusCode: isInternalRedirect ? 'HSTS' : details.statusCode,
     method: details.method,
     ip: details.ip,
     type: details.type,
@@ -629,8 +635,6 @@ export function handleBeforeRequest(details: chrome.webRequest.WebRequestBodyDet
       if (pending) {
         const candidate = chainsById.get(pending.chainId);
         if (candidate) {
-          chain = candidate;
-
           const fromUrl =
             pending.fromUrl ||
             candidate.pendingFinalDetails?.details?.url ||
@@ -638,22 +642,34 @@ export function handleBeforeRequest(details: chrome.webRequest.WebRequestBodyDet
             tabLastCommittedUrl.get(details.tabId) ||
             candidate.initialUrl;
 
-          const rawClientEvent: RedirectEvent = {
-            timestamp: formatTimestamp(details.timeStamp),
-            timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
-            from: fromUrl || '',
-            to: details.url,
-            statusCode: 'JS',
-            method: 'CLIENT',
-            type: 'client-redirect',
-          };
-          const classifiedClientEvent = classifyEventLikeHop(rawClientEvent);
+          // Only treat as client redirect if the new URL is related to the chain.
+          // Navigation to a completely different domain is a new user action, not a redirect.
+          const isRelated = fromUrl ? sameHost(fromUrl, details.url) : false;
 
-          appendEventToChain(candidate, classifiedClientEvent);
+          if (isRelated) {
+            chain = candidate;
 
-          candidate.pendingFinalDetails = null;
-          cancelAwaitingClientRedirect(candidate);
-          updateBadgeForChain(candidate);
+            const rawClientEvent: RedirectEvent = {
+              timestamp: formatTimestamp(details.timeStamp),
+              timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
+              from: fromUrl || '',
+              to: details.url,
+              statusCode: 'JS',
+              method: 'CLIENT',
+              type: 'client-redirect',
+            };
+            const classifiedClientEvent = classifyEventLikeHop(rawClientEvent);
+
+            appendEventToChain(candidate, classifiedClientEvent);
+
+            candidate.pendingFinalDetails = null;
+            cancelAwaitingClientRedirect(candidate);
+            updateBadgeForChain(candidate);
+          } else {
+            // Different domain — finalize the old chain and let this start fresh
+            scheduleChainFinalization(candidate);
+            pendingClientRedirects.delete(details.tabId);
+          }
         } else {
           pendingClientRedirects.delete(details.tabId);
         }
@@ -723,37 +739,44 @@ export function handleWebNavigationCommitted(
     if (pending) {
       const chain = chainsById.get(pending.chainId);
       if (chain?.awaitingClientRedirect) {
-        const lastNonNoisy = [...chain.events].reverse().find((e) => !e.noise && e.to);
-        const lastTarget = lastNonNoisy?.to || chain.events.at(-1)?.to;
+        const fromUrl =
+          pending.fromUrl ||
+          chain.pendingFinalDetails?.details?.url ||
+          chain.events.at(-1)?.to ||
+          chain.initialUrl ||
+          '';
 
-        let isBackwardHop = false;
-        if (lastTarget && details.url) {
-          try {
-            const a = new URL(lastTarget);
-            const b = new URL(details.url);
-            isBackwardHop = a.hostname === b.hostname && a.pathname === b.pathname;
-          } catch {
-            /* ignore */
+        // If navigation goes to a different domain, it's user action — just finalize
+        const isRelatedDomain = fromUrl ? sameHost(fromUrl, details.url) : false;
+
+        if (isRelatedDomain) {
+          const lastNonNoisy = [...chain.events].reverse().find((e) => !e.noise && e.to);
+          const lastTarget = lastNonNoisy?.to || chain.events.at(-1)?.to;
+
+          let isBackwardHop = false;
+          if (lastTarget && details.url) {
+            try {
+              const a = new URL(lastTarget);
+              const b = new URL(details.url);
+              isBackwardHop = a.hostname === b.hostname && a.pathname === b.pathname;
+            } catch {
+              /* ignore */
+            }
           }
-        }
 
-        if (!isBackwardHop) {
-          const clientHop = classifyEventLikeHop({
-            timestamp: formatTimestamp(details.timeStamp),
-            timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
-            from:
-              pending.fromUrl ||
-              chain.pendingFinalDetails?.details?.url ||
-              chain.events.at(-1)?.to ||
-              chain.initialUrl ||
-              '',
-            to: details.url,
-            statusCode: 'JS',
-            method: 'CLIENT',
-            type: 'client-redirect',
-          });
+          if (!isBackwardHop) {
+            const clientHop = classifyEventLikeHop({
+              timestamp: formatTimestamp(details.timeStamp),
+              timestampMs: typeof details.timeStamp === 'number' ? details.timeStamp : undefined,
+              from: fromUrl,
+              to: details.url,
+              statusCode: 'JS',
+              method: 'CLIENT',
+              type: 'client-redirect',
+            });
 
-          appendEventToChain(chain, clientHop);
+            appendEventToChain(chain, clientHop);
+          }
         }
 
         cancelAwaitingClientRedirect(chain);
@@ -761,7 +784,7 @@ export function handleWebNavigationCommitted(
           details: {
             requestId: chain.id,
             tabId: details.tabId,
-            url: details.url,
+            url: isRelatedDomain ? details.url : fromUrl,
             type: 'main_frame',
             statusCode: 200,
             timeStamp: details.timeStamp || Date.now(),
