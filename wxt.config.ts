@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Redirect Inspector',
     description: 'Inspect and visualize redirect chains directly in your browser.',
-    version: '1.1.0',
+    version: '2.0.0',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st/?utm_source=chrome-web-store&utm_medium=listing&utm_campaign=redirect-inspector',
     minimum_chrome_version: '116',

@@ -1,66 +1,119 @@
 # Redirect Inspector
 
-Redirect Inspector is a lightweight browser extension that captures redirect chains in real-time so you can understand how a browser request eventually lands on its destination. It is particularly useful for QA specialists, SEO experts, and developers investigating unexpected navigation flows.
+Browser extension that captures and visualizes HTTP redirect chains in real time. See every hop, status code, and timing — directly in the browser side panel.
 
-## Install
+## Features
 
-- [Chrome Web Store](https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg)
-- [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/redirect-inspector/ckblhiaefgkhpgilekhcpapnkpihdlaa)
+### Redirect Tracking
+- **Real-time capture** — Records redirect chains as they happen via `webRequest` API
+- **Full chain visualization** — Every hop with status code, method, IP, timing, and content type
+- **Client-side redirect detection** — Tracks meta-refresh and JS-based redirects with configurable timeout
+- **Pending state** — Shows actively resolving chains before they complete
 
-Learn more about the project (and the upcoming free Traffic Delivery System) at [301.st](https://301.st).
+### Noise Filtering
+- **Smart classification** — Auto-detects tracking pixels, analytics beacons, and media sub-requests
+- **33 known noise domains** — Google Ads, Meta Pixel, Yandex Metrica, Criteo, HotJar, and more
+- **Toggle visibility** — Hide or show noise with one click, badge shows hidden count
+- **Per-hop tagging** — Each noisy event labeled with reason (tracking keyword, pixel extension, etc.)
 
-## Features (MVP)
+### UX
+- **Side Panel UI** — Full interface in browser sidebar, always accessible
+- **Quick Actions Popup** — Status overview, open panel, clear log, rate on CWS
+- **Dark / Light theme** — Follows system preference, manual toggle available
+- **Sticky collapsible header** — Controls hide on scroll down, reappear on scroll up
+- **Copy to clipboard** — Export any redirect chain as formatted text
+- **Badge counter** — Icon badge shows redirect count per tab
 
-- 🧭 Records redirect chains as they happen using the `webRequest` API.
-- 🧩 Groups multiple hops from the same request so you can follow the entire chain.
-- 🧪 Shows in-progress redirect chains instantly while the network request is still pending.
-- 🧼 Deduplicates identical hops so each redirect appears only once.
-- 🎛️ Hides pixel, analytics, and media requests by default—with a toggle to reveal them when needed.
-- 🗂️ Stores the most recent 50 redirect chains for quick reference.
-- 🧹 Allows clearing the stored log with a single click.
-- 📋 Presents key details for each hop (origin, destination, HTTP status, method, tab, initiator).
-- 📤 Copies a shareable summary of any redirect chain straight to your clipboard.
+## Installation
 
-## Getting Started
+### Chrome Web Store
+[Redirect Inspector](https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg)
 
-1. Clone this repository or download it as a ZIP archive.
-2. In Chrome, navigate to `chrome://extensions/` and enable **Developer mode**.
-3. Click **Load unpacked** and select this repository's root directory.
-4. Trigger some redirects in another tab (e.g., visiting URLs known to redirect) and open the extension popup to inspect the captured chain.
+### Firefox Add-ons
+Coming soon...
+
+### Manual Installation (Development)
+
+```bash
+git clone https://github.com/investblog/redirect-inspector.git
+cd redirect-inspector
+npm install
+npm run dev
+```
+
+Load the extension:
+- **Chrome**: `chrome://extensions` -> Developer Mode -> Load unpacked -> select `dist/chrome-mv3`
+- **Firefox**: `about:debugging` -> Load Temporary Add-on -> select `dist/firefox-mv2/manifest.json`
+
+## Usage
+
+1. Click the extension icon to open the popup
+2. Click **Open Full Panel** to launch the side panel
+3. Browse the web — redirect chains appear automatically
+4. Click any chain to expand and see every hop
+5. Use the **Copy** button to export a chain as text
+6. Toggle **Show pixel, analytics & media requests** to reveal noise
+
+## Tech Stack
+
+- **Framework**: [WXT](https://wxt.dev/) (Chrome MV3 + Firefox MV2)
+- **Language**: TypeScript
+- **Linter**: Biome
+- **Tests**: Vitest (52 specs)
+- **UI**: Vanilla DOM + CSS custom properties (301.st design system)
 
 ## Project Structure
 
 ```
-redirect-inspector/
-├── manifest.json
-├── src/
-│   ├── background/
-│   │   └── service-worker.js
-│   └── popup/
-│       ├── index.html
-│       ├── popup.css
-│       └── popup.js
-└── README.md
+src/
+├── entrypoints/
+│   ├── background/index.ts      # Listener registration, message router
+│   ├── popup/                    # Mini popup (status + open panel)
+│   └── sidepanel/                # Main UI (redirect list, filters, export)
+├── background/
+│   ├── chains.ts                 # Chain lifecycle (create, attach, finalize)
+│   ├── classify.ts               # Noise classification (tracking, media, pixels)
+│   ├── badge.ts                  # Tab badge rendering and countdown
+│   ├── helpers.ts                # URL utils, header parsing, constants
+│   └── index.ts                  # Re-exports
+├── shared/
+│   ├── types/redirect.ts         # RedirectRecord, RedirectEvent, Chain
+│   ├── messaging/                # Type-safe message protocol
+│   └── theme.ts                  # Dark/light theme management
+├── assets/css/                   # Styles (theme tokens, panel, popup)
+└── public/icons/                 # Extension icons (16, 32, 48, 128)
 ```
 
-## Versioning
+## Development
 
-This repository follows semantic versioning aligned with the extension manifest. The current version is **1.2.0**, which introduces instant in-progress log updates, duplicate-hop cleanup, and a noise filter toggle. Future updates should increment the manifest version and document notable changes in this README.
+```bash
+npm run dev            # Dev server (Chrome)
+npm run dev:firefox    # Dev server (Firefox)
+npm run build          # Production build (Chrome)
+npm run build:firefox  # Production build (Firefox)
+npm run zip:all        # Create zips for store submission
+npm run typecheck      # TypeScript check
+npm run lint           # Biome lint
+npm run test           # Run tests
+npm run check          # All checks (typecheck + lint + test)
+```
 
-## Release History
+## Privacy
 
-- **1.2.0** — Show in-progress redirects instantly, hide noisy pixel/media hops by default, and deduplicate identical hops.
-- **1.1.0** — Added clipboard export for redirect chains and refreshed documentation.
-- **1.0.0** — Initial MVP release.
+- **No data collection** — Zero analytics, zero tracking, zero telemetry
+- **Local only** — All data stored in `browser.storage.local`, never leaves the browser
+- **No remote calls** — Extension makes zero network requests of its own
+- **Open source** — Full code available for audit
 
-## Development Notes
+## Related
 
-- The background service worker stores redirect entries inside `chrome.storage.local` so the popup can retrieve them.
-- Redirect chains are grouped by request ID so the UI shows every hop from start to finish.
-- The popup uses message passing to request the log and to clear it.
-- Provide your own extension artwork (icons, screenshots) if you plan to publish the extension in the Chrome Web Store.
-- To extend the extension (e.g., export logs, add filtering, or sync storage), build upon the existing modules under `src/`.
+- [301.st](https://301.st) — Advanced domain management with redirects, TDS, and multi-account orchestration
+- [Cloudflare Tools](https://github.com/investblog/cloudflare-tools) — Bulk operations for Cloudflare zones
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).
+
+## Issues
+
+[Report bugs or request features](https://github.com/investblog/redirect-inspector/issues)
