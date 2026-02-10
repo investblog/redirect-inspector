@@ -1,40 +1,53 @@
-name: Build & Release Chrome Extension
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'   # run only on tags like v1.0.0
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create dist folder
-        run: mkdir -p dist
-
-      - name: Build zip
-        run: |
-          zip -r dist/redirect-inspector.zip \
-            manifest.json \
-            src \
-            icons \
-            LICENSE \
-            README.md \
-            -x "**/.git*" "**/.github*" "**/node_modules/*"
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: redirect-inspector
-          path: dist/redirect-inspector.zip
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Create GitHub Release
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare WXT types
+        run: npx wxt prepare
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build and zip all
+        run: npm run zip:all
+
+      - name: List artifacts
+        run: ls -la dist/*.zip
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/redirect-inspector.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/*-chrome.zip
+            dist/*-firefox.zip
+            dist/*-sources.zip

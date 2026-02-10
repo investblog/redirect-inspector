@@ -1,0 +1,174 @@
+/* =========================
+   Mini Popup — Redirect Inspector
+   ========================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space-4, 1rem);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  background: var(--bg, #fff);
+  color: var(--text, #111);
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+/* ---- Header ---- */
+
+.popup__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.brand-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.popup__title {
+  font-size: var(--fs-lg, 1.125rem);
+  font-weight: var(--fw-semibold, 600);
+  margin: 0;
+}
+
+/* ---- Status ---- */
+
+.popup__status {
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--text-muted, #666);
+  padding: var(--space-2, 0.5rem);
+  background: var(--bg-soft, #f5f5f5);
+  border-radius: var(--radius, 0.5rem);
+  text-align: center;
+}
+
+/* ---- Actions ---- */
+
+.popup__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1, 0.25rem);
+  border: none;
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: var(--fs-sm, 0.875rem);
+  font-weight: var(--fw-semibold, 600);
+  line-height: 1.25;
+  transition: background 120ms ease-out, color 120ms ease-out;
+  text-decoration: none;
+}
+
+.btn--primary {
+  background: var(--primary, #2563eb);
+  color: #fff;
+}
+
+.btn--primary:hover {
+  background: var(--primary-hover, #1d4ed8);
+}
+
+.btn--secondary {
+  background: var(--bg-soft, #f3f4f6);
+  color: var(--text, #374151);
+  border: 1px solid var(--border-subtle, rgba(0,0,0,0.08));
+}
+
+.btn--secondary:hover {
+  background: var(--border-subtle, #e5e7eb);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--primary, #6366f1);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---- Theme toggle ---- */
+
+.popup__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popup__review {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--text-muted, #6b7280);
+  text-decoration: none;
+  padding: 0.25rem 0.4rem;
+  border-radius: var(--radius, 0.5rem);
+  transition: color 120ms ease-out, background 120ms ease-out;
+}
+
+.popup__review:hover {
+  color: var(--text, #111);
+  background: var(--primary-soft, rgba(0,0,0,0.06));
+}
+
+.popup__review-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #6b7280);
+  padding: 0.35rem;
+  border-radius: var(--radius, 0.5rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 120ms ease-out, background 120ms ease-out;
+}
+
+.theme-toggle:hover {
+  color: var(--text, #111);
+  background: var(--primary-soft, rgba(0,0,0,0.06));
+}
+
+.theme-toggle svg {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}

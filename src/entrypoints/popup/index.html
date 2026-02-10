@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirect Inspector</title>
+    <link rel="stylesheet" href="../../assets/css/theme.css" />
+    <link rel="stylesheet" href="../../assets/css/popup.css" />
+  </head>
+  <body>
+    <div class="popup">
+      <header class="popup__header">
+        <a
+          href="https://301.st/?utm_source=chrome_ext&utm_medium=popup_logo&utm_campaign=redirect_inspector"
+          class="brand-icon"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open 301.st"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <path
+              fill="#5E8BFF"
+              d="M24.545 34.284c-.025 1.893-.137 3.778-.81 5.585-1.257 3.376-3.697 5.359-7.185 6.063-.94.19-1.92.261-2.881.27-4.467.044-8.934.045-13.4.062H0V36.196h.395c4.1.019 8.2.03 12.3.005a7.3 7.3 0 0 0 1.952-.295c1.318-.384 2.187-1.488 2.251-2.855.065-1.376.098-2.758.06-4.135-.054-1.902-1.42-3.26-3.323-3.328-1.578-.056-3.158-.059-4.737-.064-2.835-.01-5.67-.003-8.505-.016H0V17.54h.361c3.885 0 7.77.01 11.655-.013a5.3 5.3 0 0 0 1.694-.284c1.121-.391 1.808-1.496 1.82-2.768.006-.706.002-1.411 0-2.117-.004-1.62-1.098-2.722-2.708-2.723L.441 9.634H.063V1.729H.38c5.691.02 11.382.013 17.073.025 1.18.003 2.369.054 3.434.648 1.257.7 2.06 1.763 2.137 3.216.09 1.693.071 3.39.074 5.086a69 69 0 0 1-.068 3.57c-.082 1.637-.5 3.177-1.567 4.47-.872 1.057-1.954 1.806-3.31 2.115-.019.003-.032.026-.078.066.164.034.309.057.449.092 2.944.745 4.866 2.532 5.51 5.54a23 23 0 0 1 .442 3.367c.087 1.45.088 2.906.07 4.36m15.546.094c-.005 1.872-.258 3.712-1.102 5.414-1.589 3.201-4.16 5.182-7.584 6.089-1.564.413-3.16.415-4.781.37V38.71c.49-.035.975-.049 1.455-.108 2.041-.25 3.36-1.432 4.133-3.286.512-1.23.73-2.537.757-3.855.07-3.396.097-6.793.117-10.19.01-1.565-.008-3.131-.064-4.694-.055-1.477-.236-2.938-.806-4.326-.796-1.936-2.318-2.984-4.407-3.006-.79-.008-1.581-.001-2.387-.001v-7.48c.033-.013.062-.035.09-.035 1.432.02 2.87-.042 4.295.08 2.542.22 4.785 1.208 6.669 2.956 1.84 1.707 2.991 3.808 3.427 6.285.122.698.192 1.416.193 2.125q.018 10.834-.005 21.669zM48 1.772V46.24c-.1.007-.19.018-.28.018q-2.136.006-4.268.002c-.177 0-.357-.023-.529-.062-.316-.074-.522-.277-.571-.6-.032-.207-.03-.42-.03-.63-.002-14.015 0-28.03-.012-42.046 0-.813.342-1.142 1.144-1.146 1.159-.007 2.318-.003 3.477-.004z"
+            />
+          </svg>
+        </a>
+        <h1 class="popup__title">Redirect Inspector</h1>
+      </header>
+
+      <div id="status" class="popup__status">Loading...</div>
+
+      <div class="popup__actions">
+        <button id="open-panel" class="btn btn--primary" type="button">
+          Open Full Panel &rarr;
+        </button>
+        <button id="clear-log" class="btn btn--secondary" type="button">
+          Clear Log
+        </button>
+      </div>
+
+      <div class="popup__footer">
+        <a
+          id="review-link"
+          class="popup__review"
+          href="https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg/reviews"
+          target="_blank"
+          rel="noreferrer"
+          title="Rate Redirect Inspector on Chrome Web Store"
+        >
+          <svg class="popup__review-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><mask id="a" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="1" y="2" width="22" height="20"><path d="M1 2.5V20c0 .825.675 1.5 1.5 1.5h19c.825 0 1.5-.675 1.5-1.5V2.5zm13.5 4h-5a1 1 0 1 1 0-2h5a1 1 0 1 1 0 2" fill="#fff"/></mask><g mask="url(#a)"><path d="M1 2.5h22v19H1z" fill="#eee"/></g><mask id="b" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="1" y="2" width="22" height="20"><path d="M1 2.5V20c0 .825.675 1.5 1.5 1.5h19c.825 0 1.5-.675 1.5-1.5V2.5zm13.5 4h-5a1 1 0 1 1 0-2h5a1 1 0 1 1 0 2" fill="#fff"/></mask><g mask="url(#b)"><path d="M14.5 4.5h-5a1 1 0 1 0 0 2h5a1 1 0 1 0 0-2" fill="#fff"/></g><mask id="c" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="1" y="2" width="22" height="20"><path d="M1 2.5V20c0 .825.675 1.5 1.5 1.5h19c.825 0 1.5-.675 1.5-1.5V2.5zm13.5 4h-5a1 1 0 1 1 0-2h5a1 1 0 1 1 0 2" fill="#fff"/></mask><g mask="url(#c)"><mask id="d" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="2" y="10" width="20" height="20"><path d="M12 29.5a9.5 9.5 0 1 0 0-19 9.5 9.5 0 0 0 0 19" fill="#fff"/></mask><g mask="url(#d)"><path d="M4.009 10.5v11.659H8.26L12 15.68h9.5V10.5z" fill="#db4437"/></g><mask id="e" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="2" y="10" width="20" height="20"><path d="M12 29.5a9.5 9.5 0 1 0 0-19 9.5 9.5 0 0 0 0 19" fill="#fff"/></mask><g mask="url(#e)"><path d="M2.5 29.5h9.043l4.197-4.198V22.16l-7.48-.001L2.5 12.28z" fill="#0f9d58"/></g><mask id="f" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="2" y="10" width="20" height="20"><path d="M12 29.5a9.5 9.5 0 1 0 0-19 9.5 9.5 0 0 0 0 19" fill="#fff"/></mask><g mask="url(#f)"><path d="m12 15.681 3.74 6.478-4.196 7.34H21.5V15.682z" fill="#ffcd40"/></g><mask id="g" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="2" y="10" width="20" height="20"><path d="M12 29.5a9.5 9.5 0 1 0 0-19 9.5 9.5 0 0 0 0 19" fill="#fff"/></mask><g mask="url(#g)"><path d="M12 24.319a4.319 4.319 0 1 0 0-8.638 4.319 4.319 0 0 0 0 8.638" fill="#f1f1f1"/><path d="M12 23.455a3.455 3.455 0 1 0 0-6.91 3.455 3.455 0 0 0 0 6.91" fill="#4285f4"/></g></g><path d="M1 11.875h22V12H1z" fill="#212121" fill-opacity=".02"/><path d="M1 12h22v.125H1z" fill="#fff" fill-opacity=".05"/></svg>
+          <span>Rate us ★</span>
+        </a>
+        <button id="theme-toggle" class="theme-toggle" type="button" title="Toggle theme" aria-label="Toggle theme">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

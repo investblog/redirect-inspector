@@ -1,9 +1,33 @@
-# Node and tooling artifacts
+# Dependencies
 node_modules/
-.DS_Store
-/dist
-.env
 
-# Python virtual environments
-.venv/
-__pycache__/
+# Build output
+dist/
+.output/
+
+# WXT
+.wxt/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Zip files (for store submission)
+*.zip
+
+# Claude Code local settings
+.claude/
