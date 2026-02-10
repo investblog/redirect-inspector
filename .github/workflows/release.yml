@@ -50,4 +50,5 @@ jobs:
           files: |
             dist/*-chrome.zip
             dist/*-firefox.zip
+            dist/*-edge.zip
             dist/*-sources.zip

@@ -10,7 +10,8 @@ export default defineConfig({
     version: '2.0.1',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
-    minimum_chrome_version: '116',
+
+    ...(browser === 'chrome' && { minimum_chrome_version: '116' }),
 
     permissions:
       browser === 'firefox'

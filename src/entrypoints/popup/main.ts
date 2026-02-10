@@ -148,15 +148,32 @@ if (themeToggleBtn) {
   });
 }
 
+const STORE_LINKS: Record<string, { url: string; title: string }> = {
+  chrome: {
+    url: 'https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg/reviews',
+    title: 'Rate Redirect Inspector on Chrome Web Store',
+  },
+  edge: {
+    url: 'https://microsoftedge.microsoft.com/addons/detail/ckblhiaefgkhpgilekhcpapnkpihdlaa',
+    title: 'Rate Redirect Inspector on Edge Add-ons',
+  },
+};
+
 function patchBrandLinks(): void {
   const browserName = (import.meta as any).env?.BROWSER || 'chrome';
   document.querySelectorAll<HTMLAnchorElement>('.brand-icon').forEach((a) => {
     a.href = a.href.replace('chrome_ext', `${browserName}_ext`);
   });
 
-  // Hide Chrome Web Store review link on non-Chrome browsers
-  if (browserName !== 'chrome') {
-    document.getElementById('review-link')?.remove();
+  const reviewLink = document.getElementById('review-link') as HTMLAnchorElement | null;
+  const store = STORE_LINKS[browserName];
+
+  if (reviewLink && store) {
+    reviewLink.href = store.url;
+    reviewLink.title = store.title;
+  } else if (reviewLink) {
+    // No store link for this browser (e.g. Firefox)
+    reviewLink.remove();
   }
 }
 
