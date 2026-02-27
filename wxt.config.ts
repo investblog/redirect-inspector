@@ -27,6 +27,20 @@ export default defineConfig({
       128: 'icons/128.png',
     },
 
+    ...(browser !== 'firefox' && {
+      side_panel: {
+        default_path: 'popup.html?sidepanel=1',
+      },
+    }),
+
+    ...(browser === 'firefox' && {
+      sidebar_action: {
+        default_panel: 'popup.html?sidepanel=1',
+        default_title: 'Redirect Inspector',
+        default_icon: { 16: 'icons/16.png', 32: 'icons/32.png' },
+      },
+    }),
+
     ...(browser === 'firefox' && {
       browser_specific_settings: {
         gecko: {

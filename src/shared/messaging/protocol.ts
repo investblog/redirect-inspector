@@ -16,10 +16,6 @@ export interface MessageMap {
       error?: string;
     };
   };
-  'redirect-inspector:open-side-panel': {
-    request: Record<string, never>;
-    response: undefined;
-  };
 }
 
 export type MessageType = keyof MessageMap;

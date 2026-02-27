@@ -93,12 +93,6 @@ export default defineBackground(() => {
       return true;
     }
 
-    if (type === 'redirect-inspector:open-side-panel') {
-      // sidePanel.open() requires user gesture context — must be called from popup, not background
-      sendResponse({ success: false, error: 'Must open from popup with user gesture' });
-      return false;
-    }
-
     sendResponse({ ok: false, error: 'Unknown message type' });
     return false;
   }) as any);
