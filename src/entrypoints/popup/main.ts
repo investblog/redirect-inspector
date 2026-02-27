@@ -5,6 +5,7 @@
 
 import { browser } from 'wxt/browser';
 import { sendMessageSafe } from '../../shared/messaging';
+import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { Classification, RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 
@@ -41,19 +42,6 @@ let popupControls: HTMLElement | null = null;
 let countEl: HTMLElement | null = null;
 
 const template = document.getElementById('redirect-item-template') as HTMLTemplateElement;
-
-// ---- Store links ----
-
-const STORE_LINKS: Record<string, { url: string; title: string }> = {
-  chrome: {
-    url: 'https://chromewebstore.google.com/detail/redirect-inspector/jkeijlkbgkdnhmejgofbbapdbhjljdgg/reviews',
-    title: 'Rate Redirect Inspector on Chrome Web Store',
-  },
-  edge: {
-    url: 'https://microsoftedge.microsoft.com/addons/detail/ckblhiaefgkhpgilekhcpapnkpihdlaa',
-    title: 'Rate Redirect Inspector on Edge Add-ons',
-  },
-};
 
 // ---- Build UI ----
 
@@ -177,19 +165,25 @@ function buildUI(): void {
   const footer = document.createElement('div');
   footer.className = 'popup__footer';
 
-  const store = STORE_LINKS[browserName];
-  if (store) {
+  const storeInfo = getStoreInfo();
+  if (storeInfo) {
     const reviewLink = document.createElement('a');
     reviewLink.id = 'review-link';
     reviewLink.className = 'popup__review';
-    reviewLink.href = store.url;
+    reviewLink.href = storeInfo.url;
     reviewLink.target = '_blank';
     reviewLink.rel = 'noreferrer';
-    reviewLink.title = store.title;
-    reviewLink.innerHTML = `<svg class="popup__review-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><span>Rate us</span>`;
+    reviewLink.title = `Rate on ${storeInfo.label}`;
+    const storeIcon = document.createElement('img');
+    storeIcon.src = storeInfo.icon;
+    storeIcon.width = 14;
+    storeIcon.height = 14;
+    storeIcon.alt = '';
+    storeIcon.className = 'popup__review-icon';
+    reviewLink.appendChild(storeIcon);
+    reviewLink.appendChild(document.createTextNode('Rate us'));
     footer.appendChild(reviewLink);
   } else {
-    // Spacer for layout
     footer.appendChild(document.createElement('span'));
   }
 
