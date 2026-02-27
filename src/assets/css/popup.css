@@ -409,9 +409,7 @@ body.sidepanel {
 .redirect-item__heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  overflow: hidden;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -424,6 +422,7 @@ body.sidepanel {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  flex: 1;
 }
 
 .redirect-item__meta {
@@ -626,6 +625,7 @@ body.sidepanel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
@@ -646,7 +646,7 @@ body.sidepanel {
   display: block;
 }
 
-/* ---- Drawer ---- */
+/* ---- Drawer (301-ui pattern) ---- */
 
 .drawer {
   position: fixed;
@@ -659,14 +659,14 @@ body.sidepanel {
 .drawer__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
 
 .drawer__panel {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 560px;
   background: var(--bg, #fff);
   border-left: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
   display: flex;
@@ -686,12 +686,11 @@ body.sidepanel {
 
 .drawer__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-  background: var(--panel, var(--bg-elevated, #f7f7f8));
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
@@ -701,16 +700,38 @@ body.sidepanel {
   margin: 0;
 }
 
+/* Close button — 301-ui btn-close pattern */
+.drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #6b7280);
+  cursor: pointer;
+  border-radius: var(--radius-lg, 0.75rem);
+  flex-shrink: 0;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.drawer__close:hover {
+  background: var(--bg-soft, #f4f8fc);
+  color: var(--text, #111);
+}
+
 .drawer__close svg {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 18px;
+  height: 18px;
   display: block;
 }
 
 .drawer__body {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -721,7 +742,7 @@ body.sidepanel {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
   background: var(--panel, var(--bg-elevated, #f7f7f8));
   flex-shrink: 0;
@@ -742,12 +763,13 @@ body.sidepanel {
   font-size: var(--fs-sm, 0.875rem);
   font-weight: var(--fw-semibold, 600);
   color: var(--text-muted, #6b7280);
-  padding: var(--space-2);
+  padding: var(--space-3);
   background: var(--bg-soft, #f4f8fc);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
   border-radius: var(--radius, 0.5rem);
 }
 
-/* ---- Analysis: Issues ---- */
+/* ---- Analysis: Issues (301-ui panel pattern) ---- */
 
 .analysis-issues {
   display: grid;
@@ -755,22 +777,30 @@ body.sidepanel {
 }
 
 .analysis-issue {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius, 0.5rem);
-  border-left: 3px solid var(--info, #3B82F6);
-  background: var(--bg-elevated, #f7f7f8);
+  border-left: 4px solid var(--info, #3B82F6);
+  background: color-mix(in srgb, var(--info, #3B82F6) 8%, var(--bg-soft, #f4f8fc));
+  border: 1px solid color-mix(in srgb, var(--info, #3B82F6) 20%, transparent);
+  border-left: 4px solid var(--info, #3B82F6);
 }
 
 .analysis-issue--error {
-  border-left-color: var(--danger, #FF4F6E);
+  background: color-mix(in srgb, var(--danger, #FF4F6E) 8%, var(--bg-soft, #f4f8fc));
+  border-color: color-mix(in srgb, var(--danger, #FF4F6E) 20%, transparent);
+  border-left: 4px solid var(--danger, #FF4F6E);
 }
 
 .analysis-issue--warning {
-  border-left-color: var(--warning, #FFB347);
+  background: color-mix(in srgb, var(--warning, #FFB347) 8%, var(--bg-soft, #f4f8fc));
+  border-color: color-mix(in srgb, var(--warning, #FFB347) 20%, transparent);
+  border-left: 4px solid var(--warning, #FFB347);
 }
 
 .analysis-issue--info {
-  border-left-color: var(--info, #3B82F6);
+  background: color-mix(in srgb, var(--info, #3B82F6) 8%, var(--bg-soft, #f4f8fc));
+  border-color: color-mix(in srgb, var(--info, #3B82F6) 20%, transparent);
+  border-left: 4px solid var(--info, #3B82F6);
 }
 
 .analysis-issue__title {
@@ -779,11 +809,17 @@ body.sidepanel {
   color: var(--text, #111);
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .analysis-issue__icon {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.analysis-issue__icon svg {
+  display: block;
 }
 
 .analysis-issue--error .analysis-issue__icon {
@@ -805,7 +841,7 @@ body.sidepanel {
   line-height: 1.4;
 }
 
-/* ---- Analysis: Tags ---- */
+/* ---- Analysis: Tags (301-ui badge pattern) ---- */
 
 .analysis-tags {
   display: flex;
@@ -816,19 +852,22 @@ body.sidepanel {
 .analysis-tag {
   display: inline-flex;
   align-items: center;
-  background: var(--primary-soft, rgba(94, 139, 255, 0.12));
-  border: 1px solid color-mix(in srgb, var(--primary, #5e8bff) 30%, transparent);
-  color: var(--primary, #5e8bff);
+  padding-inline: 0.75em;
+  padding-block: 0.15em;
   border-radius: var(--r-pill, 999px);
-  padding: 2px 8px;
-  font-size: 11px;
-  line-height: 1;
+  border: 1px solid color-mix(in srgb, var(--primary, #5e8bff) 30%, transparent);
+  background: color-mix(in srgb, var(--primary, #5e8bff) 8%, transparent);
+  color: var(--primary, #5e8bff);
+  font-size: var(--fs-xs, 0.75rem);
+  font-weight: var(--fw-medium, 500);
+  line-height: 1.6;
   white-space: nowrap;
 }
 
 .analysis-tag--sm {
-  padding: 1px 5px;
   font-size: 10px;
+  padding-inline: 0.5em;
+  padding-block: 0.1em;
 }
 
 /* ---- Analysis: Hops ---- */

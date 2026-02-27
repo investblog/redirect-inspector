@@ -17,6 +17,7 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Logs
 *.log
@@ -29,5 +30,9 @@ npm-debug.log*
 # Zip files (for store submission)
 *.zip
 
-# Claude Code local settings
+# Temp
+temp/
+
+# Claude Code local settings & instructions
 .claude/
+CLAUDE.md

@@ -1,6 +1,6 @@
 import type { AnalysisResult, Severity } from '../../../shared/analysis/types';
 import type { RedirectRecord } from '../../../shared/types/redirect';
-import { el } from '../helpers';
+import { el, ICONS, svgIcon } from '../helpers';
 
 function getHost(url: string | undefined): string {
   try {
@@ -10,10 +10,10 @@ function getHost(url: string | undefined): string {
   }
 }
 
-const SEVERITY_ICON: Record<Severity, string> = {
-  error: '\u2717', // X mark
-  warning: '\u26A0', // Warning triangle
-  info: '\u2139', // Info circle
+const SEVERITY_ICON_PATH: Record<Severity, string> = {
+  error: ICONS.xCircle,
+  warning: ICONS.alertTriangle,
+  info: ICONS.info,
 };
 
 export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisResult, onClose: () => void): HTMLElement {
@@ -35,11 +35,11 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const headerTitle = el('h2', 'drawer__title', 'Chain Analysis');
   header.appendChild(headerTitle);
 
-  const closeBtn = el('button', 'drawer__close btn--ghost');
+  const closeBtn = el('button', 'drawer__close');
   closeBtn.type = 'button';
   closeBtn.title = 'Close';
   closeBtn.setAttribute('aria-label', 'Close');
-  closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  closeBtn.appendChild(svgIcon(ICONS.x, 16));
   closeBtn.addEventListener('click', () => {
     drawer.remove();
     onClose();
@@ -61,7 +61,8 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
       const card = el('div', `analysis-issue analysis-issue--${issue.severity}`);
 
       const titleRow = el('div', 'analysis-issue__title');
-      const icon = el('span', 'analysis-issue__icon', SEVERITY_ICON[issue.severity]);
+      const icon = el('span', 'analysis-issue__icon');
+      icon.appendChild(svgIcon(SEVERITY_ICON_PATH[issue.severity], 14));
       titleRow.appendChild(icon);
       titleRow.appendChild(document.createTextNode(` ${issue.title}`));
       card.appendChild(titleRow);

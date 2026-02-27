@@ -10,6 +10,7 @@ import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { Classification, RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 import { createAnalysisDrawer } from './components/analysis-drawer';
+import { ICONS, svgIcon } from './helpers';
 
 // ---- Mode detection ----
 
@@ -813,7 +814,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   analyzeBtn.type = 'button';
   analyzeBtn.title = 'Analyze chain';
   analyzeBtn.setAttribute('aria-label', 'Analyze chain');
-  analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+  analyzeBtn.appendChild(svgIcon(ICONS.search, 16));
   analyzeBtn.addEventListener('click', () => {
     const result = analyzeChain(record);
     const drawer = createAnalysisDrawer(record, result, () => {
