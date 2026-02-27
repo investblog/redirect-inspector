@@ -1,6 +1,6 @@
-import type { AnalysisResult, Severity } from '../../../shared/analysis/types';
+import type { AnalysisResult } from '../../../shared/analysis/types';
 import type { RedirectRecord } from '../../../shared/types/redirect';
-import { el, ICONS, svgIcon } from '../helpers';
+import { el, severityIcon, svgIcon } from '../helpers';
 
 function getHost(url: string | undefined): string {
   try {
@@ -10,11 +10,48 @@ function getHost(url: string | undefined): string {
   }
 }
 
-const SEVERITY_ICON_PATH: Record<Severity, string> = {
-  error: ICONS.xCircle,
-  warning: ICONS.alertTriangle,
-  info: ICONS.info,
-};
+const SEVERITY_SYMBOL: Record<string, string> = { error: '\u2717', warning: '\u26a0', info: '\u2139' };
+
+function formatAnalysisReport(record: RedirectRecord, result: AnalysisResult): string {
+  const events = Array.isArray(record.events) ? record.events : [];
+  const lines: string[] = [];
+
+  // Header
+  lines.push(`Redirect Inspector \u00b7 Chain Analysis`);
+  lines.push(result.summary, '');
+
+  // Hops with full URLs
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    const ann = result.hopAnnotations[i];
+    const status = String(ev.statusCode ?? '\u2014');
+    const from = ev.from || '?';
+    const to = ev.to || '';
+    const route = to ? `${from} \u2192 ${to}` : from;
+    const tags = ann?.tags.length ? `  [${ann.tags.join(', ')}]` : '';
+    lines.push(`${i + 1}. [${status}] ${route}${tags}`);
+  }
+
+  // Issues — compact: icon + title only
+  if (result.issues.length > 0) {
+    lines.push('');
+    for (const issue of result.issues) {
+      const sym = SEVERITY_SYMBOL[issue.severity] || '-';
+      lines.push(`${sym} ${issue.title}`);
+    }
+  }
+
+  // Final destination
+  const finalUrl = record.finalUrl || events.at(-1)?.to || events.at(-1)?.from || record.initialUrl;
+  if (finalUrl || record.finalStatus) {
+    lines.push('');
+    const status = record.finalStatus ? ` (${record.finalStatus})` : '';
+    lines.push(`\u2192 ${finalUrl || '?'}${status}`);
+  }
+
+  lines.push('', '\u2014 Redirect Inspector (301.st)');
+  return lines.join('\n');
+}
 
 export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisResult, onClose: () => void): HTMLElement {
   const drawer = el('aside', 'drawer');
@@ -35,23 +72,64 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const headerTitle = el('h2', 'drawer__title', 'Chain Analysis');
   header.appendChild(headerTitle);
 
+  const headerActions = el('div', 'drawer__header-actions');
+
+  const copyBtn = el('button', 'drawer__close drawer__copy');
+  copyBtn.type = 'button';
+  copyBtn.title = 'Copy analysis report';
+  copyBtn.setAttribute('aria-label', 'Copy analysis report');
+  copyBtn.appendChild(svgIcon('copy'));
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(formatAnalysisReport(record, result));
+      copyBtn.title = 'Copied!';
+      copyBtn.setAttribute('aria-label', 'Copied!');
+      copyBtn.classList.add('drawer__copy--success');
+      copyBtn.disabled = true;
+      setTimeout(() => {
+        copyBtn.disabled = false;
+        copyBtn.title = 'Copy analysis report';
+        copyBtn.setAttribute('aria-label', 'Copy analysis report');
+        copyBtn.classList.remove('drawer__copy--success');
+      }, 1600);
+    } catch (err) {
+      console.error('Failed to copy analysis report', err);
+    }
+  });
+  headerActions.appendChild(copyBtn);
+
   const closeBtn = el('button', 'drawer__close');
   closeBtn.type = 'button';
   closeBtn.title = 'Close';
   closeBtn.setAttribute('aria-label', 'Close');
-  closeBtn.appendChild(svgIcon(ICONS.x, 16));
+  closeBtn.appendChild(svgIcon('close'));
   closeBtn.addEventListener('click', () => {
     drawer.remove();
     onClose();
   });
-  header.appendChild(closeBtn);
+  headerActions.appendChild(closeBtn);
+
+  header.appendChild(headerActions);
   panel.appendChild(header);
 
   // -- Body --
   const body = el('div', 'drawer__body');
+  const events = Array.isArray(record.events) ? record.events : [];
 
-  // Summary line
-  const summaryEl = el('div', 'analysis-summary', result.summary);
+  // Summary line with hop badge
+  const summaryEl = el('div', 'analysis-summary');
+  const hopCount = events.length;
+  const hopBadge = el('span', 'hop-badge');
+  hopBadge.textContent = String(hopCount);
+  hopBadge.title = hopCount === 1 ? '1 hop' : `${hopCount} hops`;
+  hopBadge.dataset.level = hopCount > 5 ? 'error' : hopCount > 3 ? 'warn' : 'ok';
+  summaryEl.appendChild(hopBadge);
+
+  // Append the rest of summary after the hop count (e.g. " · 1 info")
+  const summaryParts = result.summary.replace(/^\d+\s+hops?/, '').trim();
+  if (summaryParts) {
+    summaryEl.appendChild(document.createTextNode(` ${summaryParts}`));
+  }
   body.appendChild(summaryEl);
 
   // Issues list
@@ -62,12 +140,30 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
 
       const titleRow = el('div', 'analysis-issue__title');
       const icon = el('span', 'analysis-issue__icon');
-      icon.appendChild(svgIcon(SEVERITY_ICON_PATH[issue.severity], 14));
+      icon.appendChild(svgIcon(severityIcon(issue.severity)));
       titleRow.appendChild(icon);
       titleRow.appendChild(document.createTextNode(` ${issue.title}`));
       card.appendChild(titleRow);
 
-      const detail = el('div', 'analysis-issue__detail', issue.detail);
+      const detail = el('div', 'analysis-issue__detail');
+      if (issue.id === 'CHAIN_LENGTH') {
+        // Inject hop count as a badge: "Chain has <badge> hops. ..."
+        const match = issue.detail.match(/^(Chain has )(\d+)( hops?\. .+)$/);
+        if (match) {
+          const count = Number(match[2]);
+          detail.appendChild(document.createTextNode(match[1]));
+          const badge = el('span', 'hop-badge');
+          badge.textContent = match[2];
+          badge.title = count === 1 ? '1 hop' : `${count} hops`;
+          badge.dataset.level = count > 5 ? 'error' : count > 3 ? 'warn' : 'ok';
+          detail.appendChild(badge);
+          detail.appendChild(document.createTextNode(match[3]));
+        } else {
+          detail.textContent = issue.detail;
+        }
+      } else {
+        detail.textContent = issue.detail;
+      }
       card.appendChild(detail);
 
       issuesSection.appendChild(card);
@@ -85,7 +181,6 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   }
 
   // Hop table
-  const events = Array.isArray(record.events) ? record.events : [];
   if (events.length > 0) {
     const hopsSection = el('div', 'analysis-hops');
     const hopsTitle = el('h3', 'analysis-hops__title', 'Hops');

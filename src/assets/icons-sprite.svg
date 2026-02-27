@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="i-mono-magnify" viewBox="0 0 20 20"><path d="M7.75 1.25a6.5 6.5 0 0 1 6.5 6.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27a6.52 6.52 0 0 1-4.23 1.56 6.5 6.5 0 1 1 0-13m0 2c-2.5 0-4.5 2-4.5 4.5s2 4.5 4.5 4.5 4.5-2 4.5-4.5-2-4.5-4.5-4.5" fill="currentColor"/></symbol>
+<symbol id="i-mono-close" viewBox="0 0 20 20"><path d="M17 4.41L15.59 3L10 8.59L4.41 3L3 4.41L8.59 10L3 15.59L4.41 17L10 11.41L15.59 17L17 15.59L11.41 10L17 4.41Z" fill="currentColor"/></symbol>
+<symbol id="i-mono-close-circle" viewBox="0 0 20 20"><path d="M10 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-18C4.47 0 0 4.47 0 10s4.47 10 10 10 10-4.47 10-10S15.53 0 10 0m2.59 6L10 8.59 7.41 6 6 7.41 8.59 10 6 12.59 7.41 14 10 11.41 12.59 14 14 12.59 11.41 10 14 7.41z" fill="currentColor"/></symbol>
+<symbol id="i-mono-alert-triangle" viewBox="0 0 20 20"><path d="M10 1.364 0 18.636h20M10 5l6.846 11.818H3.155M9.09 8.636v3.637h1.818V8.636M9.09 14.091v1.818h1.818v-1.818" fill="currentColor"/></symbol>
+<symbol id="i-mono-info" viewBox="0 0 20 20"><path d="M11 7H9V5h2m0 10H9V9h2m-1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20" fill="currentColor"/></symbol>
+<symbol id="i-mono-copy" viewBox="0 0 19 22"><path d="M17 20H6V6h11m0-2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m-3-4H2a2 2 0 0 0-2 2v14h2V2h12z" fill="currentColor"/></symbol>
+</svg>

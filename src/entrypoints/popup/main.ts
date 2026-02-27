@@ -8,9 +8,10 @@ import { analyzeChain } from '../../shared/analysis/heuristics';
 import { sendMessageSafe } from '../../shared/messaging';
 import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
-import type { Classification, RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
+import type { RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 import { createAnalysisDrawer } from './components/analysis-drawer';
-import { ICONS, svgIcon } from './helpers';
+import { svgIcon } from './helpers';
+import { buildSessionGroups, NOISE_CLASSIFICATIONS, recordTimestamp, type SessionGroup } from './session-groups';
 
 // ---- Mode detection ----
 
@@ -26,7 +27,6 @@ const POPUP_MAX_HEIGHT = 600;
 
 const SHOW_NOISE_STORAGE_KEY = 'redirectInspector:showNoiseRequests';
 const REDIRECT_LOG_KEY = 'redirectLog';
-const NOISE_CLASSIFICATIONS = new Set<Classification>(['likely-tracking', 'likely-media']);
 
 // ---- State ----
 
@@ -358,6 +358,21 @@ function describeHops(count: number): string {
   return `${count} hops`;
 }
 
+function hopLevel(count: number): string {
+  if (count > 5) return 'error';
+  if (count > 3) return 'warn';
+  return 'ok';
+}
+
+function createHopBadge(count: number): HTMLSpanElement {
+  const badge = document.createElement('span');
+  badge.className = 'hop-badge';
+  badge.dataset.level = hopLevel(count);
+  badge.textContent = String(count);
+  badge.title = describeHops(count);
+  return badge;
+}
+
 function sameHost(a: string, b: string): boolean {
   try {
     return new URL(a).host === new URL(b).host;
@@ -368,12 +383,8 @@ function sameHost(a: string, b: string): boolean {
 
 // ---- Records merge ----
 
-function recordTimestamp(record: RedirectRecord): number {
-  if (record.initiatedAt) {
-    const t = new Date(record.initiatedAt).getTime();
-    if (Number.isFinite(t)) return t;
-  }
-  return 0;
+function recordFingerprint(record: RedirectRecord): string {
+  return `${record.initialUrl || ''}\t${record.initiatedAt || ''}\t${record.events?.length ?? 0}\t${record.finalUrl || ''}`;
 }
 
 function updateRecordsFromResponse(
@@ -383,7 +394,8 @@ function updateRecordsFromResponse(
   const safePending = Array.isArray(pendingRecords) ? pendingRecords : [];
   const safePersistent = Array.isArray(persistentRecords) ? persistentRecords : [];
 
-  const seen = new Set<string>();
+  const seenIds = new Set<string>();
+  const seenFingerprints = new Set<string>();
   const merged: RedirectRecord[] = [];
 
   const pendingById = new Map<string, RedirectRecord>();
@@ -396,18 +408,28 @@ function updateRecordsFromResponse(
   for (const record of safePersistent) {
     if (!record) continue;
     const id = record.id || record.requestId;
-    if (id && seen.has(id)) continue;
+    if (id && seenIds.has(id)) continue;
+
+    const fp = recordFingerprint(record);
+    if (seenFingerprints.has(fp)) continue;
+
     if (id) {
-      seen.add(id);
+      seenIds.add(id);
       pendingById.delete(id);
     }
+    seenFingerprints.add(fp);
     merged.push(record);
   }
 
   for (const record of pendingById.values()) {
     const id = record.id || record.requestId;
-    if (id && seen.has(id)) continue;
-    if (id) seen.add(id);
+    if (id && seenIds.has(id)) continue;
+
+    const fp = recordFingerprint(record);
+    if (seenFingerprints.has(fp)) continue;
+
+    if (id) seenIds.add(id);
+    seenFingerprints.add(fp);
     merged.push(record);
   }
 
@@ -466,7 +488,7 @@ function updateNoiseSummary(
     label = trackingHidden === 1 ? 'pixel/analytics request' : 'pixel/analytics requests';
   }
 
-  noiseSummaryEl.textContent = `${hiddenCount} hidden`;
+  noiseSummaryEl.textContent = String(hiddenCount);
   noiseSummaryEl.title = `${hiddenCount} ${label} hidden`;
 }
 
@@ -482,19 +504,19 @@ interface FilterContext {
 function applyFilters(records: RedirectRecord[]): FilterContext {
   const safeRecords = Array.isArray(records) ? records : [];
   const showingNoise = Boolean(showNoiseToggle?.checked);
-  const filtered = showingNoise
-    ? safeRecords
-    : safeRecords.filter((record) => !NOISE_CLASSIFICATIONS.has(record.classification!));
   const hiddenRecords = showingNoise
     ? []
     : safeRecords.filter((record) => NOISE_CLASSIFICATIONS.has(record.classification!));
 
-  renderRedirectLog(filtered);
-  updateNoiseSummary(safeRecords.length, filtered.length, showingNoise, hiddenRecords);
+  const groups = buildSessionGroups(safeRecords, showingNoise);
+  renderSessionGroups(groups, showingNoise);
+
+  const visibleCount = groups.reduce((sum, g) => sum + 1 + g.satellites.length, 0);
+  updateNoiseSummary(safeRecords.length, visibleCount, showingNoise, hiddenRecords);
 
   return {
     total: safeRecords.length,
-    visible: filtered.length,
+    visible: visibleCount,
     hidden: hiddenRecords.length,
     showingNoise,
   };
@@ -741,12 +763,6 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     const hopsEl = clone.querySelector('.redirect-item__hops') as HTMLElement;
     hopsEl.remove();
 
-    const metaEl = clone.querySelector('.redirect-item__meta') as HTMLElement;
-    const pendingBadge = document.createElement('span');
-    pendingBadge.className = 'redirect-item__badge redirect-item__badge--pending';
-    pendingBadge.textContent = record.awaitingClientRedirect ? 'Awaiting\u2026' : 'Capturing\u2026';
-    metaEl.appendChild(pendingBadge);
-
     // No steps, no noise, no footer for pending
     const stepsEl = clone.querySelector('.redirect-item__steps') as HTMLElement;
     stepsEl.remove();
@@ -775,7 +791,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   tabEl.remove();
 
   const hopsEl = clone.querySelector('.redirect-item__hops') as HTMLElement;
-  hopsEl.textContent = describeHops(events.length);
+  hopsEl.replaceWith(createHopBadge(events.length));
 
   const metaEl = clone.querySelector('.redirect-item__meta') as HTMLElement;
 
@@ -814,7 +830,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   analyzeBtn.type = 'button';
   analyzeBtn.title = 'Analyze chain';
   analyzeBtn.setAttribute('aria-label', 'Analyze chain');
-  analyzeBtn.appendChild(svgIcon(ICONS.search, 16));
+  analyzeBtn.appendChild(svgIcon('magnify'));
   analyzeBtn.addEventListener('click', () => {
     const result = analyzeChain(record);
     const drawer = createAnalysisDrawer(record, result, () => {
@@ -854,13 +870,107 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   return clone;
 }
 
+// ---- Satellite rendering ----
+
+function renderSatelliteItem(record: RedirectRecord): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'satellite-item';
+
+  const events = normalizeEvents(record);
+
+  // Status badge (first event's status code)
+  if (events.length > 0) {
+    const statusEl = document.createElement('span');
+    statusEl.className = 'satellite-item__status';
+    statusEl.textContent = String(events[0].statusCode ?? '\u2014');
+    row.appendChild(statusEl);
+  }
+
+  // Route: fromHost → toHost (or just destination)
+  const titleEl = document.createElement('span');
+  titleEl.className = 'satellite-item__title';
+  const fromHost = events.length > 0 ? getHost(events[0].from) : '';
+  const finalUrl = record.finalUrl || events.at(-1)?.to || events.at(-1)?.from || record.initialUrl || '';
+  const toHost = getHost(finalUrl);
+  if (fromHost && toHost && fromHost !== toHost) {
+    titleEl.textContent = `${fromHost} \u2192 ${toHost}`;
+  } else {
+    titleEl.textContent = toHost || fromHost || formatUrl(finalUrl);
+  }
+  titleEl.title = `${record.initialUrl || ''} \u2192 ${finalUrl}`;
+  row.appendChild(titleEl);
+
+  // Hop badge
+  row.appendChild(createHopBadge(events.length));
+
+  // Classification meta (if applicable)
+  if (record.classification === 'likely-tracking' || record.classification === 'likely-media') {
+    const metaEl = document.createElement('span');
+    metaEl.className = 'satellite-item__meta';
+    metaEl.textContent = record.classification === 'likely-tracking' ? 'tracking' : 'media';
+    row.appendChild(metaEl);
+  }
+
+  return row;
+}
+
+function renderSatelliteSection(satellites: RedirectRecord[]): HTMLElement {
+  const section = document.createElement('div');
+  section.className = 'satellite-section';
+
+  const toggle = document.createElement('button');
+  toggle.className = 'satellite-section__toggle';
+  toggle.type = 'button';
+
+  const chevron = document.createElement('span');
+  chevron.className = 'satellite-section__chevron';
+  chevron.appendChild(svgIcon('chevron-down'));
+  toggle.appendChild(chevron);
+
+  const label = document.createTextNode(` +${satellites.length} related`);
+  toggle.appendChild(label);
+
+  section.appendChild(toggle);
+
+  const content = document.createElement('div');
+  content.className = 'satellite-section__content';
+  content.hidden = true;
+
+  for (const sat of satellites) {
+    content.appendChild(renderSatelliteItem(sat));
+  }
+
+  section.appendChild(content);
+
+  toggle.addEventListener('click', () => {
+    const isHidden = content.hidden;
+    content.hidden = !isHidden;
+    chevron.textContent = '';
+    chevron.appendChild(svgIcon(isHidden ? 'chevron-up' : 'chevron-down'));
+    updatePopupHeight();
+  });
+
+  return section;
+}
+
 // ---- Render list ----
 
-function renderRedirectLog(records: RedirectRecord[]): void {
+function renderSessionGroups(groups: SessionGroup[], _showingNoise: boolean): void {
   redirectListEl.textContent = '';
-  records.forEach((record) => {
-    redirectListEl.appendChild(renderRedirectItem(record));
-  });
+
+  for (const group of groups) {
+    const fragment = renderRedirectItem(group.primary);
+
+    if (group.satellites.length > 0) {
+      // Append satellite section to the redirect-item article
+      const article = fragment.querySelector('.redirect-item') as HTMLElement | null;
+      if (article) {
+        article.appendChild(renderSatelliteSection(group.satellites));
+      }
+    }
+
+    redirectListEl.appendChild(fragment);
+  }
 }
 
 // ---- Load / Clear ----

@@ -41,34 +41,36 @@ function checkChainLength(_record: RedirectRecord, events: RedirectEvent[]): Ana
 // ---- 2. Loop detection ----
 
 function checkLoop(_record: RedirectRecord, events: RedirectEvent[]): AnalysisIssue[] {
-  const urlCounts = new Map<string, number[]>();
+  // Track destinations: a loop means the same URL is visited more than once.
+  // Chain linkage (to[N] == from[N+1]) is normal and should not flag.
+  const visited = new Map<string, number>(); // url → first event index
+
+  // The initial from URL is the first "visit"
+  if (events.length > 0 && events[0].from) {
+    visited.set(events[0].from, 0);
+  }
 
   for (let i = 0; i < events.length; i++) {
-    const ev = events[i];
-    for (const url of [ev.from, ev.to]) {
-      if (!url) continue;
-      const indices = urlCounts.get(url);
-      if (indices) indices.push(i);
-      else urlCounts.set(url, [i]);
+    const dest = events[i].to;
+    if (!dest) continue;
+
+    const prevIdx = visited.get(dest);
+    if (prevIdx !== undefined) {
+      const host = getHost(dest) || dest;
+      return [
+        {
+          id: 'LOOP',
+          severity: 'warning',
+          title: 'Redirect loop detected',
+          detail: `URL on ${host} is visited more than once in the chain.`,
+          hops: [prevIdx, i],
+        },
+      ];
     }
+    visited.set(dest, i);
   }
 
-  const issues: AnalysisIssue[] = [];
-  for (const [url, indices] of urlCounts) {
-    if (indices.length > 1) {
-      const host = getHost(url) || url;
-      issues.push({
-        id: 'LOOP',
-        severity: 'warning',
-        title: 'Redirect loop detected',
-        detail: `URL on ${host} appears ${indices.length} times in the chain.`,
-        hops: indices,
-      });
-      break; // Report only the first loop found
-    }
-  }
-
-  return issues;
+  return [];
 }
 
 // ---- 3. Ping-pong ----
@@ -349,13 +351,9 @@ function buildHopAnnotations(events: RedirectEvent[], issues: AnalysisIssue[]): 
     return set;
   };
 
-  // Status-based tags
+  // Status-based tags (permanent/temporary omitted — status code badge already conveys this)
   for (let i = 0; i < events.length; i++) {
     const code = events[i].statusCode;
-    const numCode = typeof code === 'string' ? Number.parseInt(code, 10) : code;
-
-    if (numCode === 301 || numCode === 308) ensure(i).add('permanent');
-    else if (numCode === 302 || numCode === 303 || numCode === 307) ensure(i).add('temporary');
 
     if (code === 'JS' || events[i].method === 'CLIENT' || events[i].type === 'client-redirect') {
       ensure(i).add('client-side');
@@ -408,9 +406,8 @@ function buildGlobalTags(annotations: HopAnnotation[], issues: AnalysisIssue[]):
     for (const t of ann.tags) tagSet.add(t);
   }
 
-  // Add issue-level tags
+  // Add issue-level tags (skip 'error' — already shown as issue card)
   for (const issue of issues) {
-    if (issue.id === 'FINAL_OUTCOME' && issue.severity === 'error') tagSet.add('error');
     if (issue.id === 'TRACKING_NOISE') tagSet.add('tracking');
   }
 
