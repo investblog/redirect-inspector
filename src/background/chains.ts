@@ -533,9 +533,7 @@ export function recordRedirectEvent(details: chrome.webRequest.WebRedirectionRes
 
   // Chrome reports statusCode 0 for internal redirects (HSTS http→https upgrade)
   const isInternalRedirect =
-    details.statusCode === 0 &&
-    details.url.startsWith('http://') &&
-    details.redirectUrl?.startsWith('https://');
+    details.statusCode === 0 && details.url.startsWith('http://') && details.redirectUrl?.startsWith('https://');
 
   const rawEvent: RedirectEvent = {
     timestamp: formatTimestamp(details.timeStamp),

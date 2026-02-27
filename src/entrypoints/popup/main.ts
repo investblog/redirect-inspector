@@ -4,10 +4,12 @@
  */
 
 import { browser } from 'wxt/browser';
+import { analyzeChain } from '../../shared/analysis/heuristics';
 import { sendMessageSafe } from '../../shared/messaging';
 import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { Classification, RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
+import { createAnalysisDrawer } from './components/analysis-drawer';
 
 // ---- Mode detection ----
 
@@ -196,19 +198,24 @@ function buildUI(): void {
 
 // ---- Popup height ----
 
+function hasOpenOverlay(): boolean {
+  return !!document.querySelector('.drawer');
+}
+
 function updatePopupHeight(): void {
   if (isSidepanel) return;
 
-  // Measure actual rendered content instead of estimating
   requestAnimationFrame(() => {
+    if (hasOpenOverlay()) {
+      document.body.style.height = `${POPUP_MAX_HEIGHT}px`;
+      return;
+    }
+
     const header = document.querySelector('.popup__header') as HTMLElement | null;
     const controls = document.querySelector('.popup__controls') as HTMLElement | null;
     const footer = document.querySelector('.popup__footer') as HTMLElement | null;
 
-    const chromeH =
-      (header?.offsetHeight ?? 0) +
-      (controls?.offsetHeight ?? 0) +
-      (footer?.offsetHeight ?? 0);
+    const chromeH = (header?.offsetHeight ?? 0) + (controls?.offsetHeight ?? 0) + (footer?.offsetHeight ?? 0);
     const contentH = popupBody?.scrollHeight ?? 0;
     const needed = chromeH + contentH;
 
@@ -266,13 +273,26 @@ function updateThemeIcon(): void {
     svg.appendChild(path);
   } else {
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '5');
+    circle.setAttribute('cx', '12');
+    circle.setAttribute('cy', '12');
+    circle.setAttribute('r', '5');
     svg.appendChild(circle);
-    const rays = [[12,1,12,3],[12,21,12,23],[4.22,4.22,5.64,5.64],[18.36,18.36,19.78,19.78],[1,12,3,12],[21,12,23,12],[4.22,19.78,5.64,18.36],[18.36,5.64,19.78,4.22]];
-    for (const [x1,y1,x2,y2] of rays) {
+    const rays = [
+      [12, 1, 12, 3],
+      [12, 21, 12, 23],
+      [4.22, 4.22, 5.64, 5.64],
+      [18.36, 18.36, 19.78, 19.78],
+      [1, 12, 3, 12],
+      [21, 12, 23, 12],
+      [4.22, 19.78, 5.64, 18.36],
+      [18.36, 5.64, 19.78, 4.22],
+    ];
+    for (const [x1, y1, x2, y2] of rays) {
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', String(x1)); line.setAttribute('y1', String(y1));
-      line.setAttribute('x2', String(x2)); line.setAttribute('y2', String(y2));
+      line.setAttribute('x1', String(x1));
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', String(x2));
+      line.setAttribute('y2', String(y2));
       svg.appendChild(line);
     }
   }
@@ -705,7 +725,8 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     rootEl.classList.add('redirect-item--pending');
 
     const titleEl = clone.querySelector('.redirect-item__title') as HTMLElement;
-    const domain = getHost(record.initialUrl) || getHost(events.at(-1)?.to) || getHost(events.at(-1)?.from) || 'Unknown';
+    const domain =
+      getHost(record.initialUrl) || getHost(events.at(-1)?.to) || getHost(events.at(-1)?.from) || 'Unknown';
     titleEl.textContent = domain;
     titleEl.title = record.initialUrl || '';
 
@@ -784,6 +805,24 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   events.forEach((step) => {
     stepsEl.appendChild(renderRedirectStep(step));
   });
+
+  // Analyze button
+  const headingEl = clone.querySelector('.redirect-item__heading') as HTMLElement;
+  const analyzeBtn = document.createElement('button');
+  analyzeBtn.className = 'redirect-item__analyze btn--ghost';
+  analyzeBtn.type = 'button';
+  analyzeBtn.title = 'Analyze chain';
+  analyzeBtn.setAttribute('aria-label', 'Analyze chain');
+  analyzeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+  analyzeBtn.addEventListener('click', () => {
+    const result = analyzeChain(record);
+    const drawer = createAnalysisDrawer(record, result, () => {
+      updatePopupHeight();
+    });
+    document.body.appendChild(drawer);
+    updatePopupHeight();
+  });
+  headingEl.insertBefore(analyzeBtn, headingEl.querySelector('.redirect-item__copy'));
 
   const copyButton = clone.querySelector('.redirect-item__copy') as HTMLButtonElement | null;
   if (copyButton) {
