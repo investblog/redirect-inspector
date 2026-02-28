@@ -1,0 +1,204 @@
+/* =========================
+   Welcome Page — Redirect Inspector
+   ========================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background: var(--bg, #fff);
+  color: var(--text, #111);
+  line-height: var(--lh-body, 1.5);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Container ---- */
+
+.welcome {
+  max-width: 640px;
+  width: 100%;
+  padding: var(--space-6) var(--space-5);
+  margin: 0 auto;
+}
+
+/* ---- Header ---- */
+
+.welcome__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.welcome__icon {
+  flex-shrink: 0;
+}
+
+.welcome__title {
+  font-size: 1.5rem;
+  font-weight: var(--fw-bold, 700);
+  margin: 0;
+}
+
+/* ---- Hero ---- */
+
+.welcome__hero {
+  margin-bottom: var(--space-6);
+}
+
+.welcome__tagline {
+  font-size: 1.75rem;
+  font-weight: var(--fw-bold, 700);
+  margin: 0 0 var(--space-2);
+  color: var(--text, #111);
+}
+
+.welcome__subtitle {
+  font-size: var(--fs-lg, 1.125rem);
+  color: var(--text-muted, #666a73);
+  margin: 0;
+}
+
+/* ---- Steps ---- */
+
+.welcome__steps {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.welcome__step {
+  flex: 1;
+  background: var(--bg-elevated, #f7f7f8);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  border-radius: var(--radius-xl, 1rem);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.welcome__step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary, #0055dc);
+  color: #fff;
+  font-size: var(--fs-sm, 0.875rem);
+  font-weight: var(--fw-bold, 700);
+  flex-shrink: 0;
+}
+
+.welcome__step-title {
+  font-size: var(--fs-md, 1rem);
+  font-weight: var(--fw-semibold, 600);
+  margin: 0;
+}
+
+.welcome__step-desc {
+  font-size: var(--fs-sm, 0.875rem);
+  color: var(--text-muted, #666a73);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ---- Tips ---- */
+
+.welcome__tips {
+  margin-bottom: var(--space-6);
+}
+
+.welcome__tips-title {
+  font-size: var(--fs-md, 1rem);
+  font-weight: var(--fw-semibold, 600);
+  margin: 0 0 var(--space-2);
+}
+
+.welcome__tips-list {
+  margin: 0;
+  padding-left: 1.25em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-muted, #666a73);
+  font-size: var(--fs-sm, 0.875rem);
+}
+
+/* ---- CTA ---- */
+
+.welcome__action {
+  margin-bottom: var(--space-6);
+}
+
+.welcome__cta {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.6rem 1.5rem;
+  font-family: inherit;
+  font-size: var(--fs-md, 1rem);
+  font-weight: var(--fw-semibold, 600);
+  line-height: 1.25;
+  background: var(--primary, #0055dc);
+  color: #fff;
+  transition: background var(--transition-fast);
+}
+
+.welcome__cta:hover {
+  background: var(--primary-hover, #003682);
+}
+
+.welcome__cta:focus-visible {
+  outline: 2px solid var(--primary, #0055dc);
+  outline-offset: 2px;
+}
+
+/* ---- Footer ---- */
+
+.welcome__footer {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--text-muted, #666a73);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.welcome__footer a {
+  color: var(--primary, #0055dc);
+  text-decoration: none;
+}
+
+.welcome__footer a:hover {
+  text-decoration: underline;
+}
+
+.welcome__footer-sep {
+  color: var(--text-subtle, #8a8f99);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 500px) {
+  .welcome__steps {
+    flex-direction: column;
+  }
+
+  .welcome__tagline {
+    font-size: 1.35rem;
+  }
+}

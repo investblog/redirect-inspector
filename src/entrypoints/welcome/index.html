@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to Redirect Inspector</title>
+    <link rel="stylesheet" href="../../assets/css/theme.css" />
+    <link rel="stylesheet" href="../../assets/css/welcome.css" />
+  </head>
+  <body>
+    <main class="welcome">
+      <header class="welcome__header">
+        <img src="/icons/48.png" alt="" width="40" height="40" class="welcome__icon" />
+        <h1 class="welcome__title">Redirect Inspector</h1>
+      </header>
+
+      <section class="welcome__hero">
+        <p class="welcome__tagline">See where your clicks really go.</p>
+        <p class="welcome__subtitle">
+          Visualize HTTP redirect chains in real time &mdash; right in your browser.
+        </p>
+      </section>
+
+      <section class="welcome__steps">
+        <div class="welcome__step">
+          <span class="welcome__step-number">1</span>
+          <h2 class="welcome__step-title">Capture</h2>
+          <p class="welcome__step-desc">Every redirect chain is recorded as you browse.</p>
+        </div>
+        <div class="welcome__step">
+          <span class="welcome__step-number">2</span>
+          <h2 class="welcome__step-title">Analyze</h2>
+          <p class="welcome__step-desc">Detect loops, mixed types, auth bounces, CDN hops.</p>
+        </div>
+        <div class="welcome__step">
+          <span class="welcome__step-number">3</span>
+          <h2 class="welcome__step-title">Export</h2>
+          <p class="welcome__step-desc">Copy analysis reports to share with your team.</p>
+        </div>
+      </section>
+
+      <section class="welcome__tips">
+        <h2 class="welcome__tips-title">Tips</h2>
+        <ul class="welcome__tips-list">
+          <li>Click the toolbar icon to see captured chains</li>
+          <li>Use the magnifier to run chain analysis</li>
+          <li>Toggle the noise filter to hide tracking/media requests</li>
+          <li>Right-click the icon &rarr; &ldquo;Open in side panel&rdquo; for persistent view</li>
+        </ul>
+      </section>
+
+      <div class="welcome__action">
+        <button id="cta" class="btn btn--primary welcome__cta" type="button">
+          Open Redirect Inspector
+        </button>
+      </div>
+
+      <footer class="welcome__footer">
+        <span id="version"></span>
+        <span class="welcome__footer-sep">&middot;</span>
+        <a href="https://301.st" target="_blank" rel="noopener noreferrer">301.st</a>
+      </footer>
+    </main>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -14,6 +14,13 @@ import {
 import { REDIRECT_LOG_KEY, WEB_REQUEST_EXTRA_INFO_SPEC, WEB_REQUEST_FILTER } from '../../background/helpers';
 
 export default defineBackground(() => {
+  // ---- onInstalled: open welcome page on first install ----
+  browser.runtime.onInstalled.addListener(({ reason }) => {
+    if (reason === 'install') {
+      browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
+    }
+  });
+
   // ---- webRequest listeners ----
   // Handlers use chrome.webRequest types; browser types differ slightly but are compatible at runtime
   try {
