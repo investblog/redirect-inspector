@@ -1,3 +1,5 @@
+![Redirect Inspector](assets/banner-920x680.png)
+
 # Redirect Inspector
 
 Real-time redirect console for developers — trace server & client redirects, run local chain analysis, filter tracking noise, copy clean reports. Zero telemetry.
