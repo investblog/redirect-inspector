@@ -1,4 +1,4 @@
-![Redirect Inspector](assets/banner-920x680.png)
+![Redirect Inspector](assets/banner-1400x560.png)
 
 # Redirect Inspector
 
