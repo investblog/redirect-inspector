@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
-    version: '2.1.1',
+    version: '2.2.0',
     default_locale: 'en',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
