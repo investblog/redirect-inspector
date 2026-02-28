@@ -10,7 +10,7 @@ import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 import { createAnalysisDrawer } from './components/analysis-drawer';
-import { statusTitle, svgIcon } from './helpers';
+import { statusTitle, svg301Logo, svgIcon } from './helpers';
 import { buildSessionGroups, NOISE_CLASSIFICATIONS, recordTimestamp, type SessionGroup } from './session-groups';
 
 // ---- Mode detection ----
@@ -189,6 +189,16 @@ function buildUI(): void {
   } else {
     footer.appendChild(document.createElement('span'));
   }
+
+  const sponsor = document.createElement('a');
+  sponsor.href = 'https://301.st/?utm_source=redirect-inspector&utm_medium=extension&utm_campaign=footer';
+  sponsor.target = '_blank';
+  sponsor.rel = 'noopener';
+  sponsor.className = 'popup__sponsor';
+  sponsor.title = '301.st — Smart Traffic';
+  sponsor.appendChild(document.createTextNode('Crafted at '));
+  sponsor.appendChild(svg301Logo(14));
+  footer.appendChild(sponsor);
 
   countEl = document.createElement('span');
   countEl.className = 'popup__count';

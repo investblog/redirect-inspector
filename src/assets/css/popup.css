@@ -199,6 +199,20 @@ body.sidepanel {
   color: var(--text-muted, #6b7280);
 }
 
+.popup__sponsor {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+  color: var(--text-subtle, #8a8f99);
+  text-decoration: none;
+  font-size: var(--fs-xs, 0.75rem);
+  transition: color var(--transition-fast, 120ms ease-out);
+}
+
+.popup__sponsor:hover {
+  color: var(--text-muted, #6b7280);
+}
+
 /* ---- Buttons ---- */
 
 .btn {

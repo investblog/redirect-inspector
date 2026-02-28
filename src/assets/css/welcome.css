@@ -205,6 +205,19 @@ body {
   color: var(--text-subtle, #8a8f99);
 }
 
+.welcome__sponsor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted, #666a73);
+  text-decoration: none;
+}
+
+.welcome__sponsor:hover {
+  color: var(--text, #111);
+  text-decoration: none;
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 500px) {
