@@ -646,6 +646,10 @@ body.sidepanel {
   color: var(--danger, #991b1b);
 }
 
+.redirect-item__footer[data-type='success'] {
+  color: var(--ok, #18C27A);
+}
+
 /* ---- Satellite section (session grouping) ---- */
 
 .satellite-section {

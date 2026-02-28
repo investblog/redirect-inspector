@@ -850,7 +850,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     });
   }
 
-  // Simplified footer: only show errors/warnings, not success
+  // Footer: show final status (success green, error red)
   const footerEl = clone.querySelector('.redirect-item__footer') as HTMLElement;
   if (record.error) {
     footerEl.textContent = `\u2717 ${record.error}`;
@@ -861,6 +861,10 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     if (Number.isFinite(code) && code >= 400) {
       footerEl.textContent = `\u2717 ${record.finalStatus}`;
       footerEl.dataset.type = 'error';
+      footerEl.hidden = false;
+    } else if (Number.isFinite(code) && code >= 200 && code < 400) {
+      footerEl.textContent = `Completed with status ${record.finalStatus}`;
+      footerEl.dataset.type = 'success';
       footerEl.hidden = false;
     } else {
       footerEl.remove();
