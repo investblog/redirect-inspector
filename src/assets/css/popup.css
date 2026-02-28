@@ -19,7 +19,8 @@ body {
   background: var(--bg, #fff);
   color: var(--text, #111);
   line-height: var(--lh-body, 1.5);
-  width: 460px;
+  width: 100%;
+  max-width: 460px;
   overflow: hidden;
 }
 
@@ -1071,4 +1072,36 @@ body.sidepanel {
   display: flex;
   gap: 2px;
   flex-shrink: 0;
+}
+
+/* ---- Touch-friendly targets for mobile (Firefox Android, etc.) ---- */
+
+@media (pointer: coarse) {
+  .btn--ghost,
+  .pin-btn,
+  .theme-toggle,
+  .redirect-item__copy,
+  .redirect-item__analyze {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+  }
+
+  .drawer__close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .satellite-section__toggle {
+    min-height: 44px;
+  }
+
+  .controls__toggle input[type='checkbox'] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .controls__toggle {
+    min-height: 44px;
+  }
 }
