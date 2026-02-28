@@ -1,0 +1,8 @@
+{
+	"extName": {
+		"message": "Redirect Inspector — Console de Redirections"
+	},
+	"extDescription": {
+		"message": "Console de redirections en temps réel : tracez les redirections serveur et client, détectez les boucles et le ping-pong, copiez des rapports."
+	}
+}

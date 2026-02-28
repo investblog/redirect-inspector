@@ -1,0 +1,8 @@
+{
+	"extName": {
+		"message": "Redirect Inspector — Yönlendirme Konsolu"
+	},
+	"extDescription": {
+		"message": "Gerçek zamanlı yönlendirme konsolu: sunucu ve istemci yönlendirmelerini izleyin, döngüleri ve ping-pong tespit edin, raporları kopyalayın."
+	}
+}
