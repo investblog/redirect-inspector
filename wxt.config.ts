@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: 'Redirect Inspector',
     description: 'Inspect and visualize redirect chains directly in your browser.',
-    version: '2.0.2',
+    version: '2.1.0',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
 
