@@ -5,6 +5,7 @@
 
 import { browser } from 'wxt/browser';
 import { analyzeChain } from '../../shared/analysis/heuristics';
+import { t, tPlural } from '../../shared/i18n';
 import { sendMessageSafe } from '../../shared/messaging';
 import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
@@ -70,7 +71,7 @@ function buildUI(): void {
 
   const title = document.createElement('h1');
   title.className = 'popup__title';
-  title.textContent = 'Redirect Inspector';
+  title.textContent = t('popupTitle');
   headerLeft.appendChild(title);
 
   const headerActions = document.createElement('div');
@@ -83,8 +84,8 @@ function buildUI(): void {
       const pinBtn = document.createElement('button');
       pinBtn.className = 'pin-btn';
       pinBtn.type = 'button';
-      pinBtn.title = 'Pin to side panel';
-      pinBtn.setAttribute('aria-label', 'Pin to side panel');
+      pinBtn.title = t('pinSidePanel');
+      pinBtn.setAttribute('aria-label', t('pinSidePanel'));
       pinBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`;
       pinBtn.addEventListener('click', openSidePanel);
       headerActions.appendChild(pinBtn);
@@ -96,7 +97,7 @@ function buildUI(): void {
   clearBtn.id = 'clear-log';
   clearBtn.className = 'btn btn--primary';
   clearBtn.type = 'button';
-  clearBtn.textContent = 'Clear';
+  clearBtn.textContent = t('clearButton');
   clearBtn.addEventListener('click', clearRedirectLog);
   headerActions.appendChild(clearBtn);
 
@@ -105,8 +106,8 @@ function buildUI(): void {
   themeToggleBtn.id = 'theme-toggle';
   themeToggleBtn.className = 'theme-toggle';
   themeToggleBtn.type = 'button';
-  themeToggleBtn.title = 'Toggle theme';
-  themeToggleBtn.setAttribute('aria-label', 'Toggle theme');
+  themeToggleBtn.title = t('toggleTheme');
+  themeToggleBtn.setAttribute('aria-label', t('toggleTheme'));
   themeToggleBtn.addEventListener('click', () => {
     toggleTheme();
     updateThemeIcon();
@@ -133,7 +134,7 @@ function buildUI(): void {
   showNoiseToggle.addEventListener('change', handleShowNoiseChange);
 
   const toggleText = document.createElement('span');
-  toggleText.textContent = 'Show pixel, analytics & media requests';
+  toggleText.textContent = t('noiseFilterLabel');
 
   toggleLabel.appendChild(showNoiseToggle);
   toggleLabel.appendChild(toggleText);
@@ -176,7 +177,7 @@ function buildUI(): void {
     reviewLink.href = storeInfo.url;
     reviewLink.target = '_blank';
     reviewLink.rel = 'noreferrer';
-    reviewLink.title = `Rate on ${storeInfo.label}`;
+    reviewLink.title = t('rateOnStore', storeInfo.label);
     const storeIcon = document.createElement('img');
     storeIcon.src = storeInfo.icon;
     storeIcon.width = 14;
@@ -184,7 +185,7 @@ function buildUI(): void {
     storeIcon.alt = '';
     storeIcon.className = 'popup__review-icon';
     reviewLink.appendChild(storeIcon);
-    reviewLink.appendChild(document.createTextNode('Rate us'));
+    reviewLink.appendChild(document.createTextNode(t('rateUs')));
     footer.appendChild(reviewLink);
   } else {
     footer.appendChild(document.createElement('span'));
@@ -195,10 +196,30 @@ function buildUI(): void {
   sponsor.target = '_blank';
   sponsor.rel = 'noopener';
   sponsor.className = 'popup__sponsor';
-  sponsor.title = '301.st — Smart Traffic';
-  sponsor.appendChild(document.createTextNode('Crafted at '));
+  sponsor.title = t('sponsorTitle');
+  sponsor.appendChild(document.createTextNode(`${t('craftedAt')} `));
   sponsor.appendChild(svg301Logo(14));
   footer.appendChild(sponsor);
+
+  const ghLink = document.createElement('a');
+  ghLink.href = 'https://github.com/investblog/redirect-inspector/issues';
+  ghLink.target = '_blank';
+  ghLink.rel = 'noopener';
+  ghLink.className = 'popup__social-link';
+  ghLink.title = t('feedbackGithub');
+  ghLink.setAttribute('aria-label', t('feedbackGithub'));
+  ghLink.appendChild(svgIcon('github'));
+  footer.appendChild(ghLink);
+
+  const tgLink = document.createElement('a');
+  tgLink.href = 'https://t.me/traffic301';
+  tgLink.target = '_blank';
+  tgLink.rel = 'noopener';
+  tgLink.className = 'popup__social-link';
+  tgLink.title = t('telegramGroup');
+  tgLink.setAttribute('aria-label', t('telegramGroup'));
+  tgLink.appendChild(svgIcon('telegram'));
+  footer.appendChild(tgLink);
 
   countEl = document.createElement('span');
   countEl.className = 'popup__count';
@@ -331,7 +352,7 @@ function showStatus(message: string, type: string = 'info'): void {
 }
 
 function formatUrl(url: string | undefined): string {
-  if (!url) return 'Unknown URL';
+  if (!url) return t('unknownUrl');
   try {
     const parsed = new URL(url);
     const path =
@@ -344,7 +365,7 @@ function formatUrl(url: string | undefined): string {
 }
 
 function formatUrlSafe(raw: string | undefined): string {
-  if (!raw) return 'Unknown URL';
+  if (!raw) return t('unknownUrl');
   try {
     const u = new URL(raw);
     const path = u.pathname.endsWith('/') && u.pathname !== '/' ? u.pathname.slice(0, -1) : u.pathname;
@@ -363,9 +384,8 @@ function getHost(raw: string | undefined): string {
 }
 
 function describeHops(count: number): string {
-  if (count === 0) return 'No hops recorded';
-  if (count === 1) return '1 hop';
-  return `${count} hops`;
+  if (count === 0) return t('noHopsRecorded');
+  return tPlural(count, 'hopOne', 'hopOther');
 }
 
 function hopLevel(count: number): string {
@@ -462,7 +482,7 @@ function updateFooterCount(): void {
     countEl.textContent = '';
     return;
   }
-  countEl.textContent = `${count} chain${count === 1 ? '' : 's'}`;
+  countEl.textContent = tPlural(count, 'chainOne', 'chainOther');
 }
 
 // ---- Noise helpers ----
@@ -491,15 +511,15 @@ function updateNoiseSummary(
 
   let label: string;
   if (trackingHidden > 0 && mediaHidden > 0) {
-    label = 'pixel/analytics & media requests';
+    label = t('labelMixedRequests');
   } else if (mediaHidden > 0) {
-    label = mediaHidden === 1 ? 'media request' : 'media requests';
+    label = t('labelMediaRequests');
   } else {
-    label = trackingHidden === 1 ? 'pixel/analytics request' : 'pixel/analytics requests';
+    label = t('labelPixelRequests');
   }
 
   noiseSummaryEl.textContent = String(hiddenCount);
-  noiseSummaryEl.title = `${hiddenCount} ${label} hidden`;
+  noiseSummaryEl.title = t('noiseSummaryHidden', String(hiddenCount), label);
 }
 
 // ---- Filtering ----
@@ -534,15 +554,12 @@ function applyFilters(records: RedirectRecord[]): FilterContext {
 
 function updateStatusForRecords({ total, visible, hidden, showingNoise }: FilterContext): void {
   if (total === 0) {
-    showStatus('No redirect chains captured yet. Navigate to a site that triggers a redirect.', 'info');
+    showStatus(t('emptyState'), 'info');
     return;
   }
 
   if (!showingNoise && visible === 0 && hidden > 0) {
-    showStatus(
-      'Only pixel/analytics/media requests were captured. Enable "Show pixel, analytics & media requests" to inspect them.',
-      'info',
-    );
+    showStatus(t('emptyStateFiltered'), 'info');
     return;
   }
 
@@ -674,8 +691,8 @@ async function copyRedirectChain(record: RedirectRecord, triggerButton: HTMLButt
     await navigator.clipboard.writeText(summary);
     if (triggerButton) {
       const originalTitle = triggerButton.title;
-      triggerButton.title = 'Copied!';
-      triggerButton.setAttribute('aria-label', 'Copied!');
+      triggerButton.title = t('copied');
+      triggerButton.setAttribute('aria-label', t('copied'));
       triggerButton.classList.add('redirect-item__copy--success');
       triggerButton.disabled = true;
       setTimeout(() => {
@@ -687,7 +704,7 @@ async function copyRedirectChain(record: RedirectRecord, triggerButton: HTMLButt
     }
   } catch (error) {
     console.error('Failed to copy redirect chain', error);
-    showStatus('Failed to copy redirect chain to clipboard.', 'error');
+    showStatus(t('copyFailed'), 'error');
   }
 }
 
@@ -746,7 +763,7 @@ function pickTitleUrl(record: RedirectRecord, events: RedirectEvent[]): string {
     return record.initialUrl;
   }
 
-  return record.initialUrl || 'Unknown URL';
+  return record.initialUrl || t('unknownUrl');
 }
 
 function renderRedirectItem(record: RedirectRecord): DocumentFragment {
@@ -761,7 +778,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
 
     const titleEl = clone.querySelector('.redirect-item__title') as HTMLElement;
     const domain =
-      getHost(record.initialUrl) || getHost(events.at(-1)?.to) || getHost(events.at(-1)?.from) || 'Unknown';
+      getHost(record.initialUrl) || getHost(events.at(-1)?.to) || getHost(events.at(-1)?.from) || t('unknownHost');
     titleEl.textContent = domain;
     titleEl.title = record.initialUrl || '';
 
@@ -819,13 +836,13 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   if (record.classification === 'likely-tracking') {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';
-    classificationEl.textContent = 'Tracking';
+    classificationEl.textContent = t('classTracking');
     if (record.classificationReason) classificationEl.title = record.classificationReason;
     metaEl.appendChild(classificationEl);
   } else if (record.classification === 'likely-media') {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';
-    classificationEl.textContent = 'Media';
+    classificationEl.textContent = t('classMedia');
     if (record.classificationReason) classificationEl.title = record.classificationReason;
     metaEl.appendChild(classificationEl);
   }
@@ -840,8 +857,8 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   const analyzeBtn = document.createElement('button');
   analyzeBtn.className = 'redirect-item__analyze btn--ghost';
   analyzeBtn.type = 'button';
-  analyzeBtn.title = 'Analyze chain';
-  analyzeBtn.setAttribute('aria-label', 'Analyze chain');
+  analyzeBtn.title = t('analyzeChain');
+  analyzeBtn.setAttribute('aria-label', t('analyzeChain'));
   analyzeBtn.appendChild(svgIcon('magnify'));
   analyzeBtn.addEventListener('click', () => {
     const result = analyzeChain(record);
@@ -855,6 +872,8 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
 
   const copyButton = clone.querySelector('.redirect-item__copy') as HTMLButtonElement | null;
   if (copyButton) {
+    copyButton.title = t('copySummary');
+    copyButton.setAttribute('aria-label', t('copySummary'));
     copyButton.addEventListener('click', () => {
       copyRedirectChain(record, copyButton);
     });
@@ -873,7 +892,7 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
       footerEl.dataset.type = 'error';
       footerEl.hidden = false;
     } else if (Number.isFinite(code) && code >= 200 && code < 400) {
-      footerEl.textContent = `Completed with status ${record.finalStatus}`;
+      footerEl.textContent = t('completedWithStatus', String(record.finalStatus));
       footerEl.dataset.type = 'success';
       footerEl.hidden = false;
     } else {
@@ -927,7 +946,7 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
   if (record.classification === 'likely-tracking' || record.classification === 'likely-media') {
     const metaEl = document.createElement('span');
     metaEl.className = 'satellite-item__meta';
-    metaEl.textContent = record.classification === 'likely-tracking' ? 'tracking' : 'media';
+    metaEl.textContent = record.classification === 'likely-tracking' ? t('classTracking') : t('classMedia');
     row.appendChild(metaEl);
   }
 
@@ -947,7 +966,7 @@ function renderSatelliteSection(satellites: RedirectRecord[]): HTMLElement {
   chevron.appendChild(svgIcon('chevron-down'));
   toggle.appendChild(chevron);
 
-  const label = document.createTextNode(` +${satellites.length} related`);
+  const label = document.createTextNode(` ${t('relatedCount', String(satellites.length))}`);
   toggle.appendChild(label);
 
   section.appendChild(toggle);
@@ -1001,7 +1020,7 @@ async function loadRedirectLogFromStorage(): Promise<void> {
     updateRecordsFromResponse((storage[REDIRECT_LOG_KEY] as RedirectRecord[]) || [], []);
   } catch (error) {
     console.error('Failed to read redirect log from local storage', error);
-    showStatus('Failed to load stored redirects.', 'error');
+    showStatus(t('loadFailed'), 'error');
   }
 }
 
@@ -1042,7 +1061,7 @@ async function fetchRedirectLog(): Promise<void> {
 }
 
 async function clearRedirectLog(): Promise<void> {
-  showStatus('Clearing\u2026', 'info');
+  showStatus(t('clearingStatus'), 'info');
 
   const response = await sendMessageSafe<{ success: boolean }>({
     type: 'redirect-inspector:clear-log',
@@ -1053,7 +1072,7 @@ async function clearRedirectLog(): Promise<void> {
     applyFilters(allRedirectRecords);
     updateFooterCount();
     updatePopupHeight();
-    showStatus('Redirect log cleared.', 'success');
+    showStatus(t('clearedStatus'), 'success');
     return;
   }
 
@@ -1063,11 +1082,11 @@ async function clearRedirectLog(): Promise<void> {
     applyFilters(allRedirectRecords);
     updateFooterCount();
     updatePopupHeight();
-    showStatus('Redirect log cleared (local).', 'success');
+    showStatus(t('clearedStatus'), 'success');
   } catch (err) {
     const error = err as Error;
     console.error('Local clear failed:', error);
-    showStatus(`Failed to clear redirects: ${error.message}`, 'error');
+    showStatus(t('clearFailed'), 'error');
   }
 }
 

@@ -1,4 +1,5 @@
 import type { AnalysisResult } from '../../../shared/analysis/types';
+import { t, tPlural } from '../../../shared/i18n';
 import type { RedirectRecord } from '../../../shared/types/redirect';
 import { el, severityIcon, statusTitle, svgIcon } from '../helpers';
 
@@ -69,27 +70,31 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
 
   // -- Header --
   const header = el('div', 'drawer__header');
-  const headerTitle = el('h2', 'drawer__title', 'Chain Analysis');
+  const headerTitle = el('h2', 'drawer__title');
+  const titleIcon = svgIcon('cube-scan');
+  titleIcon.classList.add('drawer__title-icon');
+  headerTitle.appendChild(titleIcon);
+  headerTitle.appendChild(document.createTextNode(` ${t('drawerTitle')}`));
   header.appendChild(headerTitle);
 
   const headerActions = el('div', 'drawer__header-actions');
 
   const copyBtn = el('button', 'drawer__close drawer__copy');
   copyBtn.type = 'button';
-  copyBtn.title = 'Copy analysis report';
-  copyBtn.setAttribute('aria-label', 'Copy analysis report');
+  copyBtn.title = t('copyReport');
+  copyBtn.setAttribute('aria-label', t('copyReport'));
   copyBtn.appendChild(svgIcon('copy'));
   copyBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(formatAnalysisReport(record, result));
-      copyBtn.title = 'Copied!';
-      copyBtn.setAttribute('aria-label', 'Copied!');
+      copyBtn.title = t('copied');
+      copyBtn.setAttribute('aria-label', t('copied'));
       copyBtn.classList.add('drawer__copy--success');
       copyBtn.disabled = true;
       setTimeout(() => {
         copyBtn.disabled = false;
-        copyBtn.title = 'Copy analysis report';
-        copyBtn.setAttribute('aria-label', 'Copy analysis report');
+        copyBtn.title = t('copyReport');
+        copyBtn.setAttribute('aria-label', t('copyReport'));
         copyBtn.classList.remove('drawer__copy--success');
       }, 1600);
     } catch (err) {
@@ -100,8 +105,8 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
 
   const closeBtn = el('button', 'drawer__close');
   closeBtn.type = 'button';
-  closeBtn.title = 'Close';
-  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.title = t('closeButton');
+  closeBtn.setAttribute('aria-label', t('closeButton'));
   closeBtn.appendChild(svgIcon('close'));
   closeBtn.addEventListener('click', () => {
     drawer.remove();
@@ -121,7 +126,7 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const hopCount = events.length;
   const hopBadge = el('span', 'hop-badge');
   hopBadge.textContent = String(hopCount);
-  hopBadge.title = hopCount === 1 ? '1 hop' : `${hopCount} hops`;
+  hopBadge.title = tPlural(hopCount, 'hopOne', 'hopOther');
   hopBadge.dataset.level = hopCount > 5 ? 'error' : hopCount > 3 ? 'warn' : 'ok';
   summaryEl.appendChild(hopBadge);
 
@@ -130,31 +135,28 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const infoCount = result.issues.filter((i) => i.severity === 'info').length;
 
   if (errorCount > 0) {
-    const badge = el('span', 'hop-badge');
-    badge.dataset.level = 'error';
-    badge.textContent = `${errorCount} error${errorCount > 1 ? 's' : ''}`;
-    badge.title = `${errorCount} error-level issue${errorCount > 1 ? 's' : ''}`;
-    summaryEl.appendChild(badge);
+    const icon = el('span', 'analysis-summary__icon analysis-summary__icon--error');
+    icon.appendChild(svgIcon('alert-circle'));
+    icon.title = tPlural(errorCount, 'errorOne', 'errorOther');
+    summaryEl.appendChild(icon);
   }
   if (warningCount > 0) {
-    const badge = el('span', 'hop-badge');
-    badge.dataset.level = 'warn';
-    badge.textContent = `${warningCount} warning${warningCount > 1 ? 's' : ''}`;
-    badge.title = `${warningCount} warning-level issue${warningCount > 1 ? 's' : ''}`;
-    summaryEl.appendChild(badge);
+    const icon = el('span', 'analysis-summary__icon analysis-summary__icon--warning');
+    icon.appendChild(svgIcon('alert-circle'));
+    icon.title = tPlural(warningCount, 'warningOne', 'warningOther');
+    summaryEl.appendChild(icon);
   }
   if (infoCount > 0) {
-    const badge = el('span', 'hop-badge');
-    badge.dataset.level = 'info';
-    badge.textContent = `${infoCount} info`;
-    badge.title = `${infoCount} informational issue${infoCount > 1 ? 's' : ''}`;
-    summaryEl.appendChild(badge);
+    const icon = el('span', 'analysis-summary__icon analysis-summary__icon--info');
+    icon.appendChild(svgIcon('info'));
+    icon.title = t('infoCount', String(infoCount));
+    summaryEl.appendChild(icon);
   }
   if (errorCount === 0 && warningCount === 0 && infoCount === 0) {
-    const badge = el('span', 'hop-badge');
-    badge.textContent = 'no issues';
-    badge.title = 'No issues detected';
-    summaryEl.appendChild(badge);
+    const icon = el('span', 'analysis-summary__icon analysis-summary__icon--ok');
+    icon.appendChild(svgIcon('check-circle'));
+    icon.title = t('noIssuesDetail');
+    summaryEl.appendChild(icon);
   }
   body.appendChild(summaryEl);
 
@@ -180,7 +182,7 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
           detail.appendChild(document.createTextNode(match[1]));
           const badge = el('span', 'hop-badge');
           badge.textContent = match[2];
-          badge.title = count === 1 ? '1 hop' : `${count} hops`;
+          badge.title = tPlural(count, 'hopOne', 'hopOther');
           badge.dataset.level = count > 5 ? 'error' : count > 3 ? 'warn' : 'ok';
           detail.appendChild(badge);
           detail.appendChild(document.createTextNode(match[3]));
@@ -209,7 +211,7 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   // Hop table
   if (events.length > 0) {
     const hopsSection = el('div', 'analysis-hops');
-    const hopsTitle = el('h3', 'analysis-hops__title', 'Hops');
+    const hopsTitle = el('h3', 'analysis-hops__title', t('hopsTitle'));
     hopsSection.appendChild(hopsTitle);
 
     for (let i = 0; i < events.length; i++) {
@@ -251,12 +253,12 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const finalUrl = record.finalUrl || events.at(-1)?.to || events.at(-1)?.from || record.initialUrl;
   if (finalUrl) {
     const finalLabel = el('span', 'drawer__final-url');
-    finalLabel.textContent = `Final: ${getHost(finalUrl) || finalUrl}`;
+    finalLabel.textContent = t('finalUrl', getHost(finalUrl) || finalUrl);
     finalLabel.title = finalUrl;
     footer.appendChild(finalLabel);
   }
   if (record.finalStatus) {
-    footer.appendChild(el('span', 'drawer__final-status', `Status: ${record.finalStatus}`));
+    footer.appendChild(el('span', 'drawer__final-status', t('finalStatus', String(record.finalStatus))));
   }
   panel.appendChild(footer);
 

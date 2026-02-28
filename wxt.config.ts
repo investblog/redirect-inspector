@@ -5,9 +5,10 @@ export default defineConfig({
   outDir: 'dist',
 
   manifest: ({ browser }) => ({
-    name: 'Redirect Inspector',
-    description: 'Inspect and visualize redirect chains directly in your browser.',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
     version: '2.1.1',
+    default_locale: 'en',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
 
@@ -36,7 +37,7 @@ export default defineConfig({
     ...(browser === 'firefox' && {
       sidebar_action: {
         default_panel: 'popup.html?sidepanel=1',
-        default_title: 'Redirect Inspector',
+        default_title: '__MSG_extName__',
         default_icon: { 16: 'icons/16.png', 32: 'icons/32.png' },
       },
     }),

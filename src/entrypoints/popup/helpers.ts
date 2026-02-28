@@ -1,3 +1,5 @@
+import { t } from '../../shared/i18n';
+
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className?: string,
@@ -18,10 +20,15 @@ export type IconName =
   | 'close'
   | 'close-circle'
   | 'alert-triangle'
+  | 'alert-circle'
   | 'info'
   | 'copy'
   | 'chevron-down'
-  | 'chevron-up';
+  | 'chevron-up'
+  | 'check-circle'
+  | 'cube-scan'
+  | 'github'
+  | 'telegram';
 
 /**
  * Create an SVG element that references a symbol from the inline sprite.
@@ -47,20 +54,21 @@ export function severityIcon(severity: string): IconName {
   return SEVERITY_ICON[severity] || 'info';
 }
 
-const STATUS_TITLE: Record<string, string> = {
-  '301': 'Moved Permanently',
-  '302': 'Found (Temporary)',
-  '303': 'See Other',
-  '307': 'Temporary Redirect',
-  '308': 'Permanent Redirect',
-  HSTS: 'HSTS Upgrade',
-  '0': 'HSTS Upgrade',
-  JS: 'Client-side Redirect',
+const STATUS_KEY: Record<string, string> = {
+  '301': 'status301',
+  '302': 'status302',
+  '303': 'status303',
+  '307': 'status307',
+  '308': 'status308',
+  HSTS: 'statusHSTS',
+  '0': 'statusHSTS',
+  JS: 'statusJS',
 };
 
 /** Short tooltip for a redirect status code badge. */
 export function statusTitle(code: string): string {
-  return STATUS_TITLE[code] || '';
+  const key = STATUS_KEY[code];
+  return key ? t(key) : '';
 }
 
 /** 301.st brand logo — filled SVG */

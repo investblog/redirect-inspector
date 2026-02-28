@@ -218,6 +218,18 @@ body {
   text-decoration: none;
 }
 
+.welcome__social-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-subtle, #8a8f99);
+  transition: color 120ms ease-out;
+}
+
+.welcome__social-link:hover {
+  color: var(--text, #111);
+  text-decoration: none;
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 500px) {

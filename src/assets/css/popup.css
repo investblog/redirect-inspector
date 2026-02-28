@@ -213,6 +213,22 @@ body.sidepanel {
   color: var(--text-muted, #6b7280);
 }
 
+.popup__social-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-subtle, #9ca3af);
+  transition: color var(--transition-fast, 120ms ease-out);
+}
+
+.popup__social-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.popup__social-link:hover {
+  color: var(--text-muted, #6b7280);
+}
+
 /* ---- Buttons ---- */
 
 .btn {
@@ -800,6 +816,7 @@ body.sidepanel {
   z-index: 50;
   display: flex;
   justify-content: flex-end;
+  overflow: hidden;
 }
 
 .drawer__overlay {
@@ -813,6 +830,7 @@ body.sidepanel {
   position: relative;
   width: 100%;
   max-width: 560px;
+  max-height: 100%;
   background: var(--bg, #fff);
   border-left: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
   display: flex;
@@ -853,9 +871,19 @@ body.sidepanel {
 }
 
 .drawer__title {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
   font-size: var(--fs-lg, 1.125rem);
   font-weight: var(--fw-semibold, 600);
   margin: 0;
+}
+
+.drawer__title-icon {
+  width: 1.15em;
+  height: 1.15em;
+  color: var(--accent, #2563eb);
+  flex-shrink: 0;
 }
 
 /* Close button — 301-ui btn-close pattern */
@@ -929,6 +957,34 @@ body.sidepanel {
   background: var(--bg-soft, #f4f8fc);
   border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
   border-radius: var(--radius, 0.5rem);
+}
+
+/* ---- Analysis: Summary severity icons ---- */
+
+.analysis-summary__icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.analysis-summary__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.analysis-summary__icon--ok {
+  color: var(--success, #047857);
+}
+
+.analysis-summary__icon--info {
+  color: var(--accent, #2563eb);
+}
+
+.analysis-summary__icon--warning {
+  color: var(--warning, #d97706);
+}
+
+.analysis-summary__icon--error {
+  color: var(--danger, #dc2626);
 }
 
 /* ---- Analysis: Issues (301-ui panel pattern) ---- */

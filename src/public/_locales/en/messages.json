@@ -1,0 +1,284 @@
+{
+	"extName": {
+		"message": "Redirect Inspector — Redirect Console"
+	},
+	"extDescription": {
+		"message": "Real-time redirect console: trace server & client redirects, detect loops and ping-pong, copy clean reports."
+	},
+
+	"popupTitle": {
+		"message": "Redirect Inspector"
+	},
+	"pinSidePanel": {
+		"message": "Pin to side panel"
+	},
+	"clearButton": {
+		"message": "Clear"
+	},
+	"toggleTheme": {
+		"message": "Toggle theme"
+	},
+	"noiseFilterLabel": {
+		"message": "Show pixel, analytics & media requests"
+	},
+	"rateUs": {
+		"message": "Rate us"
+	},
+	"rateOnStore": {
+		"message": "Rate on $STORE$",
+		"placeholders": {
+			"store": { "content": "$1" }
+		}
+	},
+	"sponsorTitle": {
+		"message": "301.st \u2014 Smart Traffic"
+	},
+	"craftedAt": {
+		"message": "Crafted at"
+	},
+	"feedbackGithub": {
+		"message": "Feedback & Issues"
+	},
+	"telegramGroup": {
+		"message": "Telegram community"
+	},
+
+	"unknownUrl": {
+		"message": "Unknown URL"
+	},
+	"unknownHost": {
+		"message": "Unknown"
+	},
+	"noHopsRecorded": {
+		"message": "No hops recorded"
+	},
+	"hopOne": {
+		"message": "1 hop"
+	},
+	"hopOther": {
+		"message": "$COUNT$ hops",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"chainOne": {
+		"message": "1 chain"
+	},
+	"chainOther": {
+		"message": "$COUNT$ chains",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"emptyState": {
+		"message": "No redirect chains captured yet. Navigate to a site that triggers a redirect."
+	},
+	"emptyStateFiltered": {
+		"message": "Only pixel/analytics/media requests were captured. Enable \u201cShow pixel, analytics & media requests\u201d to inspect them."
+	},
+	"completedWithStatus": {
+		"message": "Completed with status $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"analyzeChain": {
+		"message": "Analyze chain"
+	},
+	"copySummary": {
+		"message": "Copy summary"
+	},
+	"copied": {
+		"message": "Copied!"
+	},
+	"copyFailed": {
+		"message": "Failed to copy redirect chain to clipboard."
+	},
+	"copyReport": {
+		"message": "Copy analysis report"
+	},
+	"closeButton": {
+		"message": "Close"
+	},
+
+	"classTracking": {
+		"message": "Tracking"
+	},
+	"classMedia": {
+		"message": "Media"
+	},
+	"relatedCount": {
+		"message": "+$COUNT$ related",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"labelMediaRequests": {
+		"message": "media requests"
+	},
+	"labelPixelRequests": {
+		"message": "pixel/analytics requests"
+	},
+	"labelMixedRequests": {
+		"message": "pixel/analytics & media requests"
+	},
+	"noiseSummaryHidden": {
+		"message": "$COUNT$ $LABEL$ hidden",
+		"placeholders": {
+			"count": { "content": "$1" },
+			"label": { "content": "$2" }
+		}
+	},
+
+	"clearingStatus": {
+		"message": "Clearing\u2026"
+	},
+	"clearedStatus": {
+		"message": "Redirect log cleared."
+	},
+	"clearFailed": {
+		"message": "Failed to clear redirects."
+	},
+	"loadFailed": {
+		"message": "Failed to load stored redirects."
+	},
+
+	"status301": {
+		"message": "Moved Permanently"
+	},
+	"status302": {
+		"message": "Found (Temporary)"
+	},
+	"status303": {
+		"message": "See Other"
+	},
+	"status307": {
+		"message": "Temporary Redirect"
+	},
+	"status308": {
+		"message": "Permanent Redirect"
+	},
+	"statusHSTS": {
+		"message": "HSTS Upgrade"
+	},
+	"statusJS": {
+		"message": "Client-side Redirect"
+	},
+
+	"drawerTitle": {
+		"message": "Chain Analysis"
+	},
+	"hopsTitle": {
+		"message": "Hops"
+	},
+	"noIssues": {
+		"message": "no issues"
+	},
+	"noIssuesDetail": {
+		"message": "No issues detected"
+	},
+	"errorOne": {
+		"message": "1 error"
+	},
+	"errorOther": {
+		"message": "$COUNT$ errors",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningOne": {
+		"message": "1 warning"
+	},
+	"warningOther": {
+		"message": "$COUNT$ warnings",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoCount": {
+		"message": "$COUNT$ info",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"errorIssueTooltip": {
+		"message": "$COUNT$ error-level issue(s)",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningIssueTooltip": {
+		"message": "$COUNT$ warning-level issue(s)",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoIssueTooltip": {
+		"message": "$COUNT$ informational issue(s)",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"finalUrl": {
+		"message": "Final: $URL$",
+		"placeholders": {
+			"url": { "content": "$1" }
+		}
+	},
+	"finalStatus": {
+		"message": "Status: $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"welcomeTitle": {
+		"message": "Welcome to Redirect Inspector"
+	},
+	"welcomeHeading": {
+		"message": "Redirect Inspector"
+	},
+	"welcomeTagline": {
+		"message": "See where your clicks really go."
+	},
+	"welcomeSubtitle": {
+		"message": "Visualize HTTP redirect chains in real time \u2014 right in your browser."
+	},
+	"stepCapture": {
+		"message": "Capture"
+	},
+	"stepCaptureDesc": {
+		"message": "Every redirect chain is recorded as you browse."
+	},
+	"stepAnalyze": {
+		"message": "Analyze"
+	},
+	"stepAnalyzeDesc": {
+		"message": "Detect loops, mixed types, auth bounces, CDN hops."
+	},
+	"stepExport": {
+		"message": "Export"
+	},
+	"stepExportDesc": {
+		"message": "Copy analysis reports to share with your team."
+	},
+	"tipsTitle": {
+		"message": "Tips"
+	},
+	"tip1": {
+		"message": "Click the toolbar icon to see captured chains"
+	},
+	"tip2": {
+		"message": "Use the magnifier to run chain analysis"
+	},
+	"tip3": {
+		"message": "Toggle the noise filter to hide tracking/media requests"
+	},
+	"tip4": {
+		"message": "Right-click the icon \u2192 \u201cOpen in side panel\u201d for persistent view"
+	},
+	"ctaButton": {
+		"message": "Open Redirect Inspector"
+	}
+}

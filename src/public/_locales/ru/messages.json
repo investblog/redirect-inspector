@@ -1,0 +1,284 @@
+{
+	"extName": {
+		"message": "Redirect Inspector — Консоль редиректов"
+	},
+	"extDescription": {
+		"message": "Консоль редиректов в реальном времени: отслеживайте серверные и клиентские редиректы, выявляйте циклы и ping-pong, копируйте отчёты."
+	},
+
+	"popupTitle": {
+		"message": "Redirect Inspector"
+	},
+	"pinSidePanel": {
+		"message": "Закрепить в боковой панели"
+	},
+	"clearButton": {
+		"message": "Очистить"
+	},
+	"toggleTheme": {
+		"message": "Переключить тему"
+	},
+	"noiseFilterLabel": {
+		"message": "Показать pixel, analytics и media-запросы"
+	},
+	"rateUs": {
+		"message": "Оценить"
+	},
+	"rateOnStore": {
+		"message": "Оценить в $STORE$",
+		"placeholders": {
+			"store": { "content": "$1" }
+		}
+	},
+	"sponsorTitle": {
+		"message": "301.st \u2014 Smart Traffic"
+	},
+	"craftedAt": {
+		"message": "Сделано в"
+	},
+	"feedbackGithub": {
+		"message": "Обратная связь"
+	},
+	"telegramGroup": {
+		"message": "Telegram-сообщество"
+	},
+
+	"unknownUrl": {
+		"message": "Неизвестный URL"
+	},
+	"unknownHost": {
+		"message": "Неизвестно"
+	},
+	"noHopsRecorded": {
+		"message": "Нет записанных переходов"
+	},
+	"hopOne": {
+		"message": "1 переход"
+	},
+	"hopOther": {
+		"message": "$COUNT$ переходов",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"chainOne": {
+		"message": "1 цепочка"
+	},
+	"chainOther": {
+		"message": "$COUNT$ цепочек",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"emptyState": {
+		"message": "Цепочки redirect ещё не зафиксированы. Перейдите на сайт с redirect."
+	},
+	"emptyStateFiltered": {
+		"message": "Зафиксированы только pixel/analytics/media-запросы. Включите \u00abПоказать pixel, analytics и media-запросы\u00bb для просмотра."
+	},
+	"completedWithStatus": {
+		"message": "Завершено со статусом $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"analyzeChain": {
+		"message": "Анализ цепочки"
+	},
+	"copySummary": {
+		"message": "Скопировать"
+	},
+	"copied": {
+		"message": "Скопировано!"
+	},
+	"copyFailed": {
+		"message": "Не удалось скопировать цепочку redirect."
+	},
+	"copyReport": {
+		"message": "Скопировать отчёт"
+	},
+	"closeButton": {
+		"message": "Закрыть"
+	},
+
+	"classTracking": {
+		"message": "Tracking"
+	},
+	"classMedia": {
+		"message": "Media"
+	},
+	"relatedCount": {
+		"message": "+$COUNT$ связанных",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"labelMediaRequests": {
+		"message": "media-запросов"
+	},
+	"labelPixelRequests": {
+		"message": "pixel/analytics-запросов"
+	},
+	"labelMixedRequests": {
+		"message": "pixel/analytics и media-запросов"
+	},
+	"noiseSummaryHidden": {
+		"message": "$COUNT$ $LABEL$ скрыто",
+		"placeholders": {
+			"count": { "content": "$1" },
+			"label": { "content": "$2" }
+		}
+	},
+
+	"clearingStatus": {
+		"message": "Очистка\u2026"
+	},
+	"clearedStatus": {
+		"message": "Лог redirect очищен."
+	},
+	"clearFailed": {
+		"message": "Не удалось очистить."
+	},
+	"loadFailed": {
+		"message": "Не удалось загрузить сохранённые redirect."
+	},
+
+	"status301": {
+		"message": "Перемещено навсегда"
+	},
+	"status302": {
+		"message": "Найдено (временно)"
+	},
+	"status303": {
+		"message": "Смотри другое"
+	},
+	"status307": {
+		"message": "Временное перенаправление"
+	},
+	"status308": {
+		"message": "Постоянное перенаправление"
+	},
+	"statusHSTS": {
+		"message": "HSTS Upgrade"
+	},
+	"statusJS": {
+		"message": "Client-side Redirect"
+	},
+
+	"drawerTitle": {
+		"message": "Анализ цепочки"
+	},
+	"hopsTitle": {
+		"message": "Hops"
+	},
+	"noIssues": {
+		"message": "нет проблем"
+	},
+	"noIssuesDetail": {
+		"message": "Проблем не обнаружено"
+	},
+	"errorOne": {
+		"message": "1 ошибка"
+	},
+	"errorOther": {
+		"message": "$COUNT$ ошибок",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningOne": {
+		"message": "1 предупреждение"
+	},
+	"warningOther": {
+		"message": "$COUNT$ предупреждений",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoCount": {
+		"message": "$COUNT$ инфо",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"errorIssueTooltip": {
+		"message": "$COUNT$ ошибок",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningIssueTooltip": {
+		"message": "$COUNT$ предупреждений",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoIssueTooltip": {
+		"message": "$COUNT$ информационных",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"finalUrl": {
+		"message": "Финал: $URL$",
+		"placeholders": {
+			"url": { "content": "$1" }
+		}
+	},
+	"finalStatus": {
+		"message": "Статус: $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"welcomeTitle": {
+		"message": "Добро пожаловать в Redirect Inspector"
+	},
+	"welcomeHeading": {
+		"message": "Redirect Inspector"
+	},
+	"welcomeTagline": {
+		"message": "Узнайте, куда ведут ваши клики."
+	},
+	"welcomeSubtitle": {
+		"message": "Визуализируйте цепочки HTTP redirect в реальном времени \u2014 прямо в браузере."
+	},
+	"stepCapture": {
+		"message": "Запись"
+	},
+	"stepCaptureDesc": {
+		"message": "Каждая цепочка redirect записывается при навигации."
+	},
+	"stepAnalyze": {
+		"message": "Анализ"
+	},
+	"stepAnalyzeDesc": {
+		"message": "Обнаружение loop, смешанных типов, auth bounce, CDN."
+	},
+	"stepExport": {
+		"message": "Экспорт"
+	},
+	"stepExportDesc": {
+		"message": "Скопируйте отчёт для коллег."
+	},
+	"tipsTitle": {
+		"message": "Советы"
+	},
+	"tip1": {
+		"message": "Нажмите на иконку в панели для просмотра цепочек"
+	},
+	"tip2": {
+		"message": "Используйте лупу для анализа цепочки"
+	},
+	"tip3": {
+		"message": "Переключите фильтр шума, чтобы скрыть tracking/media-запросы"
+	},
+	"tip4": {
+		"message": "ПКМ по иконке \u2192 \u00abОткрыть в боковой панели\u00bb для постоянного доступа"
+	},
+	"ctaButton": {
+		"message": "Открыть Redirect Inspector"
+	}
+}
