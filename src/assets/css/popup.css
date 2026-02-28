@@ -536,6 +536,12 @@ body.sidepanel {
   color: var(--danger, #FF4F6E);
 }
 
+.hop-badge[data-level='info'] {
+  background: color-mix(in srgb, var(--info, #3B82F6) 15%, transparent);
+  border-color: color-mix(in srgb, var(--info, #3B82F6) 40%, transparent);
+  color: var(--info, #3B82F6);
+}
+
 /* ---- Steps ---- */
 
 .redirect-item__steps {
@@ -570,7 +576,9 @@ body.sidepanel {
 
 /* Permanent redirects */
 .redirect-step__status[data-status="301"],
-.redirect-step__status[data-status="308"] {
+.redirect-step__status[data-status="308"],
+.satellite-item__status[data-status="301"],
+.satellite-item__status[data-status="308"] {
   background: color-mix(in srgb, var(--ok, #18C27A) 15%, var(--bg-soft, #ede9fe));
   color: var(--ok, #18C27A);
 }
@@ -578,20 +586,26 @@ body.sidepanel {
 /* Temporary redirects */
 .redirect-step__status[data-status="302"],
 .redirect-step__status[data-status="303"],
-.redirect-step__status[data-status="307"] {
+.redirect-step__status[data-status="307"],
+.satellite-item__status[data-status="302"],
+.satellite-item__status[data-status="303"],
+.satellite-item__status[data-status="307"] {
   background: color-mix(in srgb, var(--warning, #FFB347) 15%, var(--bg-soft, #ede9fe));
   color: var(--warning, #FFB347);
 }
 
 /* Client-side redirects */
-.redirect-step__status[data-status="JS"] {
+.redirect-step__status[data-status="JS"],
+.satellite-item__status[data-status="JS"] {
   background: color-mix(in srgb, var(--info, #3B82F6) 15%, var(--bg-soft, #ede9fe));
   color: var(--info, #3B82F6);
 }
 
 /* HSTS internal upgrade */
 .redirect-step__status[data-status="HSTS"],
-.redirect-step__status[data-status="0"] {
+.redirect-step__status[data-status="0"],
+.satellite-item__status[data-status="HSTS"],
+.satellite-item__status[data-status="0"] {
   background: color-mix(in srgb, var(--muted, #94a3b8) 15%, var(--bg-soft, #f1f5f9));
   color: var(--muted, #94a3b8);
   font-size: 0.65rem;

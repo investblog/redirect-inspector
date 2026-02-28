@@ -89,6 +89,31 @@ function hasHostOverlap(a: Set<string>, b: Set<string>): boolean {
   return false;
 }
 
+// ---- Navigation split ----
+
+/** Split a time-sorted cluster at domain boundaries: A,B,A → [A],[B],[A]. */
+function splitByNavigation(records: RedirectRecord[]): RedirectRecord[][] {
+  if (records.length <= 1) return [records];
+
+  const result: RedirectRecord[][] = [];
+  let current: RedirectRecord[] = [records[0]];
+  let activeHosts = getChainHosts(records[0]);
+
+  for (let i = 1; i < records.length; i++) {
+    const recHosts = getChainHosts(records[i]);
+    if (hasHostOverlap(activeHosts, recHosts)) {
+      current.push(records[i]);
+      for (const h of recHosts) activeHosts.add(h);
+    } else {
+      result.push(current);
+      current = [records[i]];
+      activeHosts = recHosts;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
 // ---- Cluster partitioning ----
 
 /** Recursively partition records by domain affinity: pick primary, collect related satellites, re-partition leftovers. */
@@ -186,9 +211,11 @@ export function buildSessionGroups(records: RedirectRecord[], showingNoise: bool
       clusters.push(currentCluster);
     }
 
-    // Per cluster: recursively partition by domain affinity
+    // Per cluster: split at domain boundaries, then partition by affinity
     for (const cluster of clusters) {
-      partitionByAffinity(cluster, tabId, completedGroups);
+      for (const sub of splitByNavigation(cluster)) {
+        partitionByAffinity(sub, tabId, completedGroups);
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 import type { AnalysisResult } from '../../../shared/analysis/types';
 import type { RedirectRecord } from '../../../shared/types/redirect';
-import { el, severityIcon, svgIcon } from '../helpers';
+import { el, severityIcon, statusTitle, svgIcon } from '../helpers';
 
 function getHost(url: string | undefined): string {
   try {
@@ -116,7 +116,7 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   const body = el('div', 'drawer__body');
   const events = Array.isArray(record.events) ? record.events : [];
 
-  // Summary line with hop badge
+  // Summary line with hop badge + severity badges
   const summaryEl = el('div', 'analysis-summary');
   const hopCount = events.length;
   const hopBadge = el('span', 'hop-badge');
@@ -125,10 +125,36 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   hopBadge.dataset.level = hopCount > 5 ? 'error' : hopCount > 3 ? 'warn' : 'ok';
   summaryEl.appendChild(hopBadge);
 
-  // Append the rest of summary after the hop count (e.g. " · 1 info")
-  const summaryParts = result.summary.replace(/^\d+\s+hops?/, '').trim();
-  if (summaryParts) {
-    summaryEl.appendChild(document.createTextNode(` ${summaryParts}`));
+  const errorCount = result.issues.filter((i) => i.severity === 'error').length;
+  const warningCount = result.issues.filter((i) => i.severity === 'warning').length;
+  const infoCount = result.issues.filter((i) => i.severity === 'info').length;
+
+  if (errorCount > 0) {
+    const badge = el('span', 'hop-badge');
+    badge.dataset.level = 'error';
+    badge.textContent = `${errorCount} error${errorCount > 1 ? 's' : ''}`;
+    badge.title = `${errorCount} error-level issue${errorCount > 1 ? 's' : ''}`;
+    summaryEl.appendChild(badge);
+  }
+  if (warningCount > 0) {
+    const badge = el('span', 'hop-badge');
+    badge.dataset.level = 'warn';
+    badge.textContent = `${warningCount} warning${warningCount > 1 ? 's' : ''}`;
+    badge.title = `${warningCount} warning-level issue${warningCount > 1 ? 's' : ''}`;
+    summaryEl.appendChild(badge);
+  }
+  if (infoCount > 0) {
+    const badge = el('span', 'hop-badge');
+    badge.dataset.level = 'info';
+    badge.textContent = `${infoCount} info`;
+    badge.title = `${infoCount} informational issue${infoCount > 1 ? 's' : ''}`;
+    summaryEl.appendChild(badge);
+  }
+  if (errorCount === 0 && warningCount === 0 && infoCount === 0) {
+    const badge = el('span', 'hop-badge');
+    badge.textContent = 'no issues';
+    badge.title = 'No issues detected';
+    summaryEl.appendChild(badge);
   }
   body.appendChild(summaryEl);
 
@@ -191,8 +217,11 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
       const ann = result.hopAnnotations[i];
       const row = el('div', 'analysis-hop');
 
-      const status = el('span', 'redirect-step__status', String(ev.statusCode ?? '\u2014'));
-      status.dataset.status = String(ev.statusCode ?? '\u2014');
+      const statusCode = String(ev.statusCode ?? '\u2014');
+      const status = el('span', 'redirect-step__status', statusCode);
+      status.dataset.status = statusCode;
+      const hint = statusTitle(statusCode);
+      if (hint) status.title = hint;
       row.appendChild(status);
 
       const fromHost = getHost(ev.from) || '?';

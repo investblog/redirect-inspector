@@ -588,6 +588,68 @@ describe('buildSessionGroups', () => {
     expect(site301Group.satellites).toHaveLength(1);
   });
 
+  it('A→B→A navigation splits into separate sessions even within 60s', () => {
+    const yandex1 = makeRecord({
+      id: 'yandex1',
+      tabId: 5,
+      initiatedAt: '2024-01-01T00:00:00.000Z',
+      initialUrl: 'https://www.yandex.ru',
+      finalUrl: 'https://dzen.ru',
+      events: [
+        {
+          timestamp: '',
+          from: 'https://www.yandex.ru',
+          to: 'https://dzen.ru',
+          statusCode: 302,
+          method: 'GET',
+          type: 'main_frame',
+        },
+      ],
+    });
+    const site301 = makeRecord({
+      id: '301st',
+      tabId: 5,
+      initiatedAt: '2024-01-01T00:00:10.000Z',
+      initialUrl: 'https://www.301.st',
+      finalUrl: 'https://301.st',
+      events: [
+        {
+          timestamp: '',
+          from: 'https://www.301.st',
+          to: 'https://301.st',
+          statusCode: 301,
+          method: 'GET',
+          type: 'main_frame',
+        },
+      ],
+    });
+    const yandex2 = makeRecord({
+      id: 'yandex2',
+      tabId: 5,
+      initiatedAt: '2024-01-01T00:00:20.000Z',
+      initialUrl: 'https://www.yandex.ru',
+      finalUrl: 'https://dzen.ru',
+      events: [
+        {
+          timestamp: '',
+          from: 'https://www.yandex.ru',
+          to: 'https://dzen.ru',
+          statusCode: 302,
+          method: 'GET',
+          type: 'main_frame',
+        },
+      ],
+    });
+
+    const groups = buildSessionGroups([yandex1, site301, yandex2], true);
+    // Three separate groups: yandex1, 301.st, yandex2
+    expect(groups).toHaveLength(3);
+    const ids = groups.map((g) => g.primary.id);
+    expect(ids).toContain('yandex1');
+    expect(ids).toContain('301st');
+    expect(ids).toContain('yandex2');
+  });
+
   it('initiator domain creates affinity', () => {
     const main = makeRecord({
       id: 'main',

@@ -10,7 +10,7 @@ import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 import { createAnalysisDrawer } from './components/analysis-drawer';
-import { svgIcon } from './helpers';
+import { statusTitle, svgIcon } from './helpers';
 import { buildSessionGroups, NOISE_CLASSIFICATIONS, recordTimestamp, type SessionGroup } from './session-groups';
 
 // ---- Mode detection ----
@@ -692,6 +692,8 @@ function renderRedirectStep(step: RedirectEvent): HTMLLIElement {
   const statusText = String(step.statusCode ?? '\u2014');
   statusBadge.textContent = statusText;
   statusBadge.dataset.status = statusText;
+  const hint = statusTitle(statusText);
+  if (hint) statusBadge.title = hint;
   li.appendChild(statusBadge);
 
   const fromHost = document.createElement('span');
@@ -882,7 +884,11 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
   if (events.length > 0) {
     const statusEl = document.createElement('span');
     statusEl.className = 'satellite-item__status';
-    statusEl.textContent = String(events[0].statusCode ?? '\u2014');
+    const code = String(events[0].statusCode ?? '\u2014');
+    statusEl.textContent = code;
+    statusEl.dataset.status = code;
+    const hint = statusTitle(code);
+    if (hint) statusEl.title = hint;
     row.appendChild(statusEl);
   }
 

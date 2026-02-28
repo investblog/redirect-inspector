@@ -46,3 +46,19 @@ const SEVERITY_ICON: Record<string, IconName> = {
 export function severityIcon(severity: string): IconName {
   return SEVERITY_ICON[severity] || 'info';
 }
+
+const STATUS_TITLE: Record<string, string> = {
+  '301': 'Moved Permanently',
+  '302': 'Found (Temporary)',
+  '303': 'See Other',
+  '307': 'Temporary Redirect',
+  '308': 'Permanent Redirect',
+  HSTS: 'HSTS Upgrade',
+  '0': 'HSTS Upgrade',
+  JS: 'Client-side Redirect',
+};
+
+/** Short tooltip for a redirect status code badge. */
+export function statusTitle(code: string): string {
+  return STATUS_TITLE[code] || '';
+}
