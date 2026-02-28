@@ -19,8 +19,7 @@ body {
   background: var(--bg, #fff);
   color: var(--text, #111);
   line-height: var(--lh-body, 1.5);
-  width: 100%;
-  max-width: 460px;
+  width: 460px;
   overflow: hidden;
 }
 
@@ -1077,6 +1076,11 @@ body.sidepanel {
 /* ---- Touch-friendly targets for mobile (Firefox Android, etc.) ---- */
 
 @media (pointer: coarse) {
+  body {
+    width: 100%;
+    max-width: 460px;
+  }
+
   .btn--ghost,
   .pin-btn,
   .theme-toggle,
