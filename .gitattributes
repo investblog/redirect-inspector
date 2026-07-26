@@ -1,0 +1,12 @@
+# Normalize line endings: everything text is LF in the repo and in checkouts,
+# so a Windows working copy can't ship CRLF artifacts into releases.
+* text=auto eol=lf
+
+# Binaries — never touch
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.woff binary
+*.woff2 binary

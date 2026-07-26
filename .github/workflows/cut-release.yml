@@ -1,0 +1,98 @@
+name: Cut release
+
+# CONTRACT: v* tags are created ONLY by this workflow, on a Linux runner, after
+# the full quality gate (typecheck + Biome + tests) passes there. Never create
+# release tags locally — a Windows machine can pass checks locally yet ship
+# platform artifacts (CRLF, path separators, locale-dependent tooling).
+#
+# GitHub does not trigger workflows for tags pushed with GITHUB_TOKEN
+# (anti-recursion), so after pushing the tag this workflow explicitly
+# dispatches Release and, optionally, Submit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Auto-submit to store(s) after tagging'
+        type: choice
+        options:
+          - none
+          - chrome
+          - edge
+          - firefox
+          - all
+        default: none
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare WXT types
+        run: npx wxt prepare
+
+      - name: Full quality gate (Linux)
+        run: npm run check
+
+      - name: Build all targets (must compile on Linux)
+        run: npm run zip:all
+
+      - name: Resolve version and verify consistency
+        id: ver
+        run: |
+          MANIFEST_VERSION=$(grep -oP "version: '\K[0-9]+\.[0-9]+\.[0-9]+" wxt.config.ts)
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ -z "$MANIFEST_VERSION" ]; then
+            echo "::error::Could not parse manifest.version from wxt.config.ts"; exit 1
+          fi
+          if [ "$MANIFEST_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Version mismatch: wxt.config.ts=$MANIFEST_VERSION package.json=$PKG_VERSION"; exit 1
+          fi
+          TAG="v$MANIFEST_VERSION"
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG already exists — bump the version first"; exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.ver.outputs.tag }}" -m "Release ${{ steps.ver.outputs.tag }} — cut by CI after Linux quality gate"
+          git push origin "refs/tags/${{ steps.ver.outputs.tag }}"
+
+      - name: Dispatch Release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml -f tag="${{ steps.ver.outputs.tag }}"
+
+      - name: Dispatch Submit workflow
+        if: inputs.submit != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run submit.yml \
+            -f tag="${{ steps.ver.outputs.tag }}" \
+            -f stores="${{ inputs.submit }}" \
+            -f dry_run=false
