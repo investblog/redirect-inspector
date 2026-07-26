@@ -33,9 +33,21 @@ describe('isNoisyUrl', () => {
     expect(isNoisyUrl('https://connect.facebook.net/sdk.js')).toBe(true);
   });
 
+  it('detects RU ad/tracking infrastructure', () => {
+    expect(isNoisyUrl('https://yandex.ru/ads/system/context.js')).toBe(true);
+    expect(isNoisyUrl('https://ad.mail.ru/dist/vkAuth.html')).toBe(true);
+    expect(isNoisyUrl('https://yastatic.net/safeframe-bundles/0.87/render.html')).toBe(true);
+    expect(isNoisyUrl('https://ads.vk.com/pixel/code')).toBe(true);
+    expect(isNoisyUrl('https://mc.yandex.ru/metrika/tag.js')).toBe(true);
+  });
+
   it('returns false for normal URLs', () => {
     expect(isNoisyUrl('https://example.com/page')).toBe(false);
     expect(isNoisyUrl('https://cdn.example.com/style.css')).toBe(false);
+    // Real navigations to portal domains must NOT be treated as noise
+    expect(isNoisyUrl('https://yandex.ru/search/?text=redirect')).toBe(false);
+    expect(isNoisyUrl('https://mail.ru/')).toBe(false);
+    expect(isNoisyUrl('https://vk.com/feed')).toBe(false);
   });
 
   it('returns false for invalid URLs', () => {

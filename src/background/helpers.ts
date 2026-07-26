@@ -65,6 +65,7 @@ export const NOISY_URL_PATTERNS = [
   '/cdn-cgi/scripts/',
   '/pagead/',
   '/ads/ga-audiences',
+  '/ads/system/',
   '/_vercel/insights',
 ];
 
@@ -85,9 +86,14 @@ export const NOISY_HOST_SUFFIXES = [
   'mc.yandex.ru',
   'mc.yandex.com',
   'an.yandex.ru',
+  'yastatic.net',
   'adfox.ru',
   'top-fwz1.mail.ru',
   'top.mail.ru',
+  'ad.mail.ru',
+  'ads.vk.com',
+  'mradx.net',
+  'adriver.ru',
   // Social pixels
   'connect.facebook.net',
   'facebook.com',
