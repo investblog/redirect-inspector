@@ -13,15 +13,16 @@ on:
   workflow_dispatch:
     inputs:
       submit:
-        description: 'Auto-submit to store(s) after tagging'
+        description: 'Auto-submit to store(s) after tagging (firefox stays manual by policy)'
         type: choice
         options:
+          - chrome-edge
           - none
           - chrome
           - edge
           - firefox
           - all
-        default: none
+        default: chrome-edge
 
 permissions:
   contents: write

@@ -90,8 +90,10 @@ bump the version, push to `main`, then run the **Cut release** workflow
 (Actions → *Cut release*, or `gh workflow run cut-release.yml`). It re-runs the
 full quality gate and the build on a Linux runner — so no Windows working-copy
 artifact (CRLF, path separators, locale-dependent tooling) can reach a release —
-then creates the tag and dispatches the workflows below. The optional `submit`
-input auto-submits to a store; default is `none`.
+then creates the tag and dispatches the workflows below. The `submit` input
+controls store submission; the default `chrome-edge` auto-submits both Chromium
+stores (Firefox stays manual by policy). Pick `none` for a tag-only release,
+e.g. when store listing texts must be updated by hand first.
 
 A `v*` tag drives two workflows (dispatched by cut-release, since
 GITHUB_TOKEN-pushed tags don't fire push triggers):
