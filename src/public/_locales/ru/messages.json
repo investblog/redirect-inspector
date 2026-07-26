@@ -296,5 +296,9 @@
 	},
 	"newsEnabledLabel": {
 		"message": "Уведомления о новостях включены."
+	},
+
+	"demoChain": {
+		"message": "Пример"
 	}
 }

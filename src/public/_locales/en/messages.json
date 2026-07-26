@@ -296,5 +296,9 @@
 	},
 	"newsEnabledLabel": {
 		"message": "News notifications are on."
+	},
+
+	"demoChain": {
+		"message": "Example"
 	}
 }

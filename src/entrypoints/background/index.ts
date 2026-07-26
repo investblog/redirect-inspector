@@ -11,6 +11,7 @@ import {
   handleRequestCompleted,
   handleRequestError,
   handleWebNavigationCommitted,
+  seedDemoRecordIfEmpty,
   serializeChainPreview,
   setupNews,
 } from '../../background';
@@ -26,6 +27,7 @@ export default defineBackground(() => {
   // ---- onInstalled: open welcome page on first install ----
   browser.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === 'install') {
+      void seedDemoRecordIfEmpty();
       browser.tabs.create({ url: browser.runtime.getURL('/welcome.html') });
     }
   });

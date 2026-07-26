@@ -296,5 +296,9 @@
 	},
 	"newsEnabledLabel": {
 		"message": "As notificações de novidades estão ativadas."
+	},
+
+	"demoChain": {
+		"message": "Exemplo"
 	}
 }

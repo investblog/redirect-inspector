@@ -31,6 +31,8 @@ export interface RedirectRecord {
   pending?: boolean;
   awaitingClientRedirect?: boolean;
   awaitingClientRedirectDeadline?: number;
+  /** Synthetic first-run example chain, labeled in the UI; removed by Clear like any record. */
+  demo?: boolean;
 }
 
 export type Classification = 'normal' | 'likely-tracking' | 'likely-media';

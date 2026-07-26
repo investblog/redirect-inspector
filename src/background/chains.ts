@@ -71,6 +71,49 @@ async function appendRedirectRecord(record: RedirectRecord): Promise<void> {
   }
 }
 
+/**
+ * First-run example: a real-world 301 (www.301.st -> 301.st) so the panel is
+ * never empty after install. Labeled "Example" in the UI; Clear removes it.
+ */
+export async function seedDemoRecordIfEmpty(): Promise<void> {
+  try {
+    const { [REDIRECT_LOG_KEY]: existing = [] } = await browser.storage.local.get(REDIRECT_LOG_KEY);
+    if ((existing as RedirectRecord[]).length > 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const record: RedirectRecord = {
+      id: 'demo-301-st',
+      tabId: -1,
+      demo: true,
+      initiatedAt: formatTimestamp(now - 120),
+      completedAt: formatTimestamp(now),
+      initialUrl: 'https://www.301.st/',
+      finalUrl: 'https://301.st/',
+      finalStatus: 200,
+      error: null,
+      events: [
+        {
+          timestamp: formatTimestamp(now - 60),
+          timestampMs: now - 60,
+          from: 'https://www.301.st/',
+          to: 'https://301.st/',
+          statusCode: 301,
+          method: 'GET',
+          type: 'main_frame',
+        },
+      ],
+      noiseEvents: [],
+      classification: 'normal',
+    };
+
+    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: [record] });
+  } catch (error) {
+    console.warn('Failed to seed demo record', error);
+  }
+}
+
 // ---- Chain Lifecycle ----
 
 export function createChain(details: { tabId: number; initiator?: string; timeStamp?: number }): Chain {

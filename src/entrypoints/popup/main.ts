@@ -887,6 +887,13 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     metaEl.appendChild(initiatorEl);
   }
 
+  if (record.demo) {
+    const demoEl = document.createElement('span');
+    demoEl.className = 'redirect-item__badge';
+    demoEl.textContent = t('demoChain');
+    metaEl.appendChild(demoEl);
+  }
+
   if (record.classification === 'likely-tracking') {
     const classificationEl = document.createElement('span');
     classificationEl.className = 'redirect-item__badge';

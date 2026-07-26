@@ -296,5 +296,9 @@
 	},
 	"newsEnabledLabel": {
 		"message": "Haber bildirimleri açık."
+	},
+
+	"demoChain": {
+		"message": "Örnek"
 	}
 }

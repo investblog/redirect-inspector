@@ -24,6 +24,7 @@ export {
   recordRedirectEvent,
   requestToChain,
   scheduleChainFinalization,
+  seedDemoRecordIfEmpty,
   serializeChainPreview,
   tabChains,
   tabLastCommittedUrl,
