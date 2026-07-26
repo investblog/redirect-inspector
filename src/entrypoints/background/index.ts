@@ -32,6 +32,13 @@ export default defineBackground(() => {
     }
   });
 
+  // ---- Uninstall feedback: opens once, when the user removes the extension ----
+  browser.runtime
+    .setUninstallURL?.(
+      'https://301.st/contact?utm_source=redirect-inspector&utm_medium=extension&utm_campaign=uninstall',
+    )
+    ?.catch((error: unknown) => console.warn('setUninstallURL failed', error));
+
   // ---- webRequest listeners ----
   // Handlers use chrome.webRequest types; browser types differ slightly but are compatible at runtime
   try {
