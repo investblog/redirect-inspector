@@ -4,14 +4,18 @@ import {
   chainsById,
   cleanupTabState,
   clearAllBadges,
+  disableNewsAlarm,
+  enableNewsAlarm,
   handleBeforeRedirect,
   handleBeforeRequest,
   handleRequestCompleted,
   handleRequestError,
   handleWebNavigationCommitted,
   serializeChainPreview,
+  setupNews,
 } from '../../background';
 import { REDIRECT_LOG_KEY, WEB_REQUEST_EXTRA_INFO_SPEC, WEB_REQUEST_FILTER } from '../../background/helpers';
+import { setNewsEnabled } from '../../shared/news';
 
 export default defineBackground(() => {
   // ---- onInstalled: open welcome page on first install ----
@@ -100,7 +104,23 @@ export default defineBackground(() => {
       return true;
     }
 
+    if (type === 'redirect-inspector:set-news-enabled') {
+      const enabled = Boolean(message?.payload?.enabled);
+      setNewsEnabled(enabled)
+        .then(() => (enabled ? enableNewsAlarm() : disableNewsAlarm()))
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+          console.error('Failed to toggle news notifications', error);
+          sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' });
+        });
+
+      return true;
+    }
+
     sendResponse({ ok: false, error: 'Unknown message type' });
     return false;
   }) as any);
+
+  // ---- 301.sh news (opt-in) ----
+  setupNews();
 });

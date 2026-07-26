@@ -280,5 +280,21 @@
 	},
 	"ctaButton": {
 		"message": "Open Redirect Inspector"
+	},
+
+	"newsToggleLabel": {
+		"message": "Notify me about 301.sh news"
+	},
+	"newsTitle": {
+		"message": "Stay in the loop"
+	},
+	"newsDesc": {
+		"message": "Get a browser notification when we publish new redirect, DNS & HTTP deep-dives on 301.sh. Off by default — the extension makes no network requests until you opt in."
+	},
+	"newsEnableButton": {
+		"message": "Enable news notifications"
+	},
+	"newsEnabledLabel": {
+		"message": "News notifications are on."
 	}
 }

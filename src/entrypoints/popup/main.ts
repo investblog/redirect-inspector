@@ -7,6 +7,7 @@ import { browser } from 'wxt/browser';
 import { analyzeChain } from '../../shared/analysis/heuristics';
 import { t, tPlural } from '../../shared/i18n';
 import { sendMessageSafe } from '../../shared/messaging';
+import { getNewsEnabled, hasNotificationsPermission, requestNotificationsPermission } from '../../shared/news';
 import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
@@ -39,6 +40,7 @@ let storageListenerRegistered = false;
 let statusEl: HTMLElement;
 let redirectListEl: HTMLElement;
 let showNoiseToggle: HTMLInputElement | null = null;
+let newsToggle: HTMLInputElement | null = null;
 let noiseSummaryEl: HTMLElement | null = null;
 let themeToggleBtn: HTMLButtonElement | null = null;
 let popupBody: HTMLElement | null = null;
@@ -145,6 +147,21 @@ function buildUI(): void {
   noiseSummaryEl.className = 'controls__summary';
   noiseSummaryEl.hidden = true;
   controls.appendChild(noiseSummaryEl);
+
+  const newsLabel = document.createElement('label');
+  newsLabel.className = 'controls__toggle';
+
+  newsToggle = document.createElement('input');
+  newsToggle.id = 'news-toggle';
+  newsToggle.type = 'checkbox';
+  newsToggle.addEventListener('change', handleNewsToggleChange);
+
+  const newsText = document.createElement('span');
+  newsText.textContent = t('newsToggleLabel');
+
+  newsLabel.appendChild(newsToggle);
+  newsLabel.appendChild(newsText);
+  controls.appendChild(newsLabel);
 
   popupControls.appendChild(controls);
   app.appendChild(popupControls);
@@ -596,6 +613,43 @@ async function handleShowNoiseChange(): Promise<void> {
   const context = applyFilters(allRedirectRecords);
   updateStatusForRecords(context);
   updatePopupHeight();
+}
+
+// ---- 301.sh news preference ----
+
+async function loadNewsPreference(): Promise<void> {
+  if (!newsToggle) return;
+  newsToggle.checked = (await getNewsEnabled()) && (await hasNotificationsPermission());
+}
+
+async function handleNewsToggleChange(): Promise<void> {
+  if (!newsToggle) return;
+
+  if (newsToggle.checked) {
+    const granted = await requestNotificationsPermission();
+    if (!granted) {
+      newsToggle.checked = false;
+      return;
+    }
+    const response = await sendMessageSafe<{ success: boolean }>({
+      type: 'redirect-inspector:set-news-enabled',
+      payload: { enabled: true },
+    });
+    if (!response?.success) {
+      newsToggle.checked = false;
+      // Don't hold a granted-but-unused permission — that profile is exactly
+      // what store reviews flag.
+      browser.permissions.remove({ permissions: ['notifications'] }).catch(() => {});
+    }
+    return;
+  }
+
+  await sendMessageSafe({ type: 'redirect-inspector:set-news-enabled', payload: { enabled: false } });
+  try {
+    await browser.permissions.remove({ permissions: ['notifications'] });
+  } catch {
+    // Firefox may refuse to silently remove — the alarm is already off, so this is cosmetic.
+  }
 }
 
 // ---- Export ----
@@ -1135,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   (async () => {
     await loadNoisePreference();
+    await loadNewsPreference();
     await loadRedirectLogFromStorage();
     await fetchRedirectLog();
   })().catch((error) => {

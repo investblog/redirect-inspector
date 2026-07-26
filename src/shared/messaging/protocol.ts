@@ -16,6 +16,13 @@ export interface MessageMap {
       error?: string;
     };
   };
+  'redirect-inspector:set-news-enabled': {
+    request: { enabled: boolean };
+    response: {
+      success: boolean;
+      error?: string;
+    };
+  };
 }
 
 export type MessageType = keyof MessageMap;

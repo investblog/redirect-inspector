@@ -4,5 +4,297 @@
 	},
 	"extDescription": {
 		"message": "Gerçek zamanlı yönlendirme konsolu: sunucu ve istemci yönlendirmelerini izleyin, döngüleri ve ping-pong tespit edin, raporları kopyalayın."
+	},
+
+	"popupTitle": {
+		"message": "Redirect Inspector"
+	},
+	"pinSidePanel": {
+		"message": "Yan panele sabitle"
+	},
+	"clearButton": {
+		"message": "Temizle"
+	},
+	"toggleTheme": {
+		"message": "Temayı değiştir"
+	},
+	"noiseFilterLabel": {
+		"message": "Piksel, analitik ve medya isteklerini göster"
+	},
+	"rateUs": {
+		"message": "Bizi değerlendirin"
+	},
+	"rateOnStore": {
+		"message": "$STORE$ üzerinde değerlendir",
+		"placeholders": {
+			"store": { "content": "$1" }
+		}
+	},
+	"sponsorTitle": {
+		"message": "301.st — Smart Traffic"
+	},
+	"craftedAt": {
+		"message": "Üretim yeri"
+	},
+	"feedbackGithub": {
+		"message": "Geri bildirim ve sorunlar"
+	},
+	"telegramGroup": {
+		"message": "Telegram topluluğu"
+	},
+
+	"unknownUrl": {
+		"message": "Bilinmeyen URL"
+	},
+	"unknownHost": {
+		"message": "Bilinmiyor"
+	},
+	"noHopsRecorded": {
+		"message": "Kayıtlı sıçrama yok"
+	},
+	"hopOne": {
+		"message": "1 sıçrama"
+	},
+	"hopOther": {
+		"message": "$COUNT$ sıçrama",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"chainOne": {
+		"message": "1 zincir"
+	},
+	"chainOther": {
+		"message": "$COUNT$ zincir",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"emptyState": {
+		"message": "Henüz yönlendirme zinciri yakalanmadı. Yönlendirme tetikleyen bir siteye gidin."
+	},
+	"emptyStateFiltered": {
+		"message": "Yalnızca piksel/analitik/medya istekleri yakalandı. İncelemek için “Piksel, analitik ve medya isteklerini göster” seçeneğini açın."
+	},
+	"completedWithStatus": {
+		"message": "$STATUS$ durumuyla tamamlandı",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"analyzeChain": {
+		"message": "Zinciri analiz et"
+	},
+	"copySummary": {
+		"message": "Özeti kopyala"
+	},
+	"copied": {
+		"message": "Kopyalandı!"
+	},
+	"copyFailed": {
+		"message": "Yönlendirme zinciri panoya kopyalanamadı."
+	},
+	"copyReport": {
+		"message": "Analiz raporunu kopyala"
+	},
+	"closeButton": {
+		"message": "Kapat"
+	},
+
+	"classTracking": {
+		"message": "Takip"
+	},
+	"classMedia": {
+		"message": "Medya"
+	},
+	"relatedCount": {
+		"message": "+$COUNT$ ilişkili",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"labelMediaRequests": {
+		"message": "medya isteği"
+	},
+	"labelPixelRequests": {
+		"message": "piksel/analitik isteği"
+	},
+	"labelMixedRequests": {
+		"message": "piksel/analitik ve medya isteği"
+	},
+	"noiseSummaryHidden": {
+		"message": "$COUNT$ $LABEL$ gizlendi",
+		"placeholders": {
+			"count": { "content": "$1" },
+			"label": { "content": "$2" }
+		}
+	},
+
+	"clearingStatus": {
+		"message": "Temizleniyor…"
+	},
+	"clearedStatus": {
+		"message": "Yönlendirme günlüğü temizlendi."
+	},
+	"clearFailed": {
+		"message": "Yönlendirmeler temizlenemedi."
+	},
+	"loadFailed": {
+		"message": "Kayıtlı yönlendirmeler yüklenemedi."
+	},
+
+	"status301": {
+		"message": "Kalıcı olarak taşındı"
+	},
+	"status302": {
+		"message": "Bulundu (geçici)"
+	},
+	"status303": {
+		"message": "Diğerine bak"
+	},
+	"status307": {
+		"message": "Geçici yönlendirme"
+	},
+	"status308": {
+		"message": "Kalıcı yönlendirme"
+	},
+	"statusHSTS": {
+		"message": "HSTS yükseltmesi"
+	},
+	"statusJS": {
+		"message": "İstemci tarafı yönlendirme"
+	},
+
+	"drawerTitle": {
+		"message": "Zincir analizi"
+	},
+	"hopsTitle": {
+		"message": "Sıçramalar"
+	},
+	"noIssues": {
+		"message": "sorun yok"
+	},
+	"noIssuesDetail": {
+		"message": "Sorun tespit edilmedi"
+	},
+	"errorOne": {
+		"message": "1 hata"
+	},
+	"errorOther": {
+		"message": "$COUNT$ hata",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningOne": {
+		"message": "1 uyarı"
+	},
+	"warningOther": {
+		"message": "$COUNT$ uyarı",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoCount": {
+		"message": "$COUNT$ bilgi",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"errorIssueTooltip": {
+		"message": "$COUNT$ hata düzeyinde sorun",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningIssueTooltip": {
+		"message": "$COUNT$ uyarı düzeyinde sorun",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoIssueTooltip": {
+		"message": "$COUNT$ bilgilendirme düzeyinde sorun",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"finalUrl": {
+		"message": "Son: $URL$",
+		"placeholders": {
+			"url": { "content": "$1" }
+		}
+	},
+	"finalStatus": {
+		"message": "Durum: $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"welcomeTitle": {
+		"message": "Redirect Inspector'a hoş geldiniz"
+	},
+	"welcomeHeading": {
+		"message": "Redirect Inspector"
+	},
+	"welcomeTagline": {
+		"message": "Tıklamalarınızın gerçekte nereye gittiğini görün."
+	},
+	"welcomeSubtitle": {
+		"message": "HTTP yönlendirme zincirlerini gerçek zamanlı görselleştirin — doğrudan tarayıcınızda."
+	},
+	"stepCapture": {
+		"message": "Yakala"
+	},
+	"stepCaptureDesc": {
+		"message": "Siz gezinirken her yönlendirme zinciri kaydedilir."
+	},
+	"stepAnalyze": {
+		"message": "Analiz et"
+	},
+	"stepAnalyzeDesc": {
+		"message": "Döngüleri, karışık türleri, auth sıçramalarını, CDN geçişlerini tespit eder."
+	},
+	"stepExport": {
+		"message": "Dışa aktar"
+	},
+	"stepExportDesc": {
+		"message": "Analiz raporlarını kopyalayıp ekibinizle paylaşın."
+	},
+	"tipsTitle": {
+		"message": "İpuçları"
+	},
+	"tip1": {
+		"message": "Yakalanan zincirleri görmek için araç çubuğu simgesine tıklayın"
+	},
+	"tip2": {
+		"message": "Zincir analizini çalıştırmak için büyüteci kullanın"
+	},
+	"tip3": {
+		"message": "Takip/medya isteklerini gizlemek için gürültü filtresini açıp kapatın"
+	},
+	"tip4": {
+		"message": "Simgeye sağ tıklayın → kalıcı görünüm için “Yan panelde aç”"
+	},
+	"ctaButton": {
+		"message": "Redirect Inspector'ı aç"
+	},
+
+	"newsToggleLabel": {
+		"message": "301.sh haberlerini bildir"
+	},
+	"newsTitle": {
+		"message": "Gelişmelerden haberdar olun"
+	},
+	"newsDesc": {
+		"message": "301.sh'te yönlendirmeler, DNS ve HTTP hakkında yeni derinlemesine yazılar yayınladığımızda tarayıcı bildirimi alın. Varsayılan olarak kapalı — siz açana kadar uzantı hiçbir ağ isteği yapmaz."
+	},
+	"newsEnableButton": {
+		"message": "Haber bildirimlerini aç"
+	},
+	"newsEnabledLabel": {
+		"message": "Haber bildirimleri açık."
 	}
 }

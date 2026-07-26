@@ -1,0 +1,64 @@
+/**
+ * 301.sh news feed — shared constants and settings access.
+ *
+ * The feature is strictly opt-in: no network requests and no notifications
+ * until the user enables it (welcome page or popup toggle). The `notifications`
+ * permission is optional and requested from a user gesture in an extension page.
+ */
+
+import { browser } from 'wxt/browser';
+
+export const NEWS_FEED_URL = 'https://301.sh/posts.json';
+export const NEWS_ALARM_NAME = 'news-check';
+export const NEWS_ALARM_PERIOD_MINUTES = 6 * 60;
+
+/** storage.sync — roams with the profile. */
+export const NEWS_ENABLED_KEY = 'redirectInspector:newsEnabled';
+/** storage.local — slugs already seen (no notification for them). */
+export const NEWS_SEEN_KEY = 'redirectInspector:newsSeenSlugs';
+/** storage.local — whether the seen-set was successfully seeded at enable time. */
+export const NEWS_SEEDED_KEY = 'redirectInspector:newsSeeded';
+/** storage.local — notification id -> article URL for click handling. */
+export const NEWS_NOTIF_URLS_KEY = 'redirectInspector:newsNotifUrls';
+
+/** One entry of https://301.sh/posts.json (`posts` array, oldest first). */
+export interface NewsPost {
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+  url: string;
+  image: string;
+  tags: string[];
+}
+
+export async function getNewsEnabled(): Promise<boolean> {
+  try {
+    const result = await browser.storage.sync.get({ [NEWS_ENABLED_KEY]: false });
+    return Boolean(result[NEWS_ENABLED_KEY]);
+  } catch {
+    return false;
+  }
+}
+
+export async function setNewsEnabled(enabled: boolean): Promise<void> {
+  await browser.storage.sync.set({ [NEWS_ENABLED_KEY]: enabled });
+}
+
+/** Must be called from a user gesture (click) in an extension page. */
+export async function requestNotificationsPermission(): Promise<boolean> {
+  try {
+    return await browser.permissions.request({ permissions: ['notifications'] });
+  } catch (error) {
+    console.warn('notifications permission request failed', error);
+    return false;
+  }
+}
+
+export async function hasNotificationsPermission(): Promise<boolean> {
+  try {
+    return await browser.permissions.contains({ permissions: ['notifications'] });
+  } catch {
+    return false;
+  }
+}

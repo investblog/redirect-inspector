@@ -4,5 +4,297 @@
 	},
 	"extDescription": {
 		"message": "Consola de redirecciones en tiempo real: rastrea redirecciones del servidor y del cliente, detecta bucles y ping-pong, copia informes."
+	},
+
+	"popupTitle": {
+		"message": "Redirect Inspector"
+	},
+	"pinSidePanel": {
+		"message": "Fijar en el panel lateral"
+	},
+	"clearButton": {
+		"message": "Limpiar"
+	},
+	"toggleTheme": {
+		"message": "Cambiar tema"
+	},
+	"noiseFilterLabel": {
+		"message": "Mostrar solicitudes de píxel, analítica y media"
+	},
+	"rateUs": {
+		"message": "Valóranos"
+	},
+	"rateOnStore": {
+		"message": "Valorar en $STORE$",
+		"placeholders": {
+			"store": { "content": "$1" }
+		}
+	},
+	"sponsorTitle": {
+		"message": "301.st — Smart Traffic"
+	},
+	"craftedAt": {
+		"message": "Creado en"
+	},
+	"feedbackGithub": {
+		"message": "Comentarios e incidencias"
+	},
+	"telegramGroup": {
+		"message": "Comunidad de Telegram"
+	},
+
+	"unknownUrl": {
+		"message": "URL desconocida"
+	},
+	"unknownHost": {
+		"message": "Desconocido"
+	},
+	"noHopsRecorded": {
+		"message": "Sin saltos registrados"
+	},
+	"hopOne": {
+		"message": "1 salto"
+	},
+	"hopOther": {
+		"message": "$COUNT$ saltos",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"chainOne": {
+		"message": "1 cadena"
+	},
+	"chainOther": {
+		"message": "$COUNT$ cadenas",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"emptyState": {
+		"message": "Aún no se han capturado cadenas de redirección. Visita un sitio que genere una redirección."
+	},
+	"emptyStateFiltered": {
+		"message": "Solo se capturaron solicitudes de píxel/analítica/media. Activa “Mostrar solicitudes de píxel, analítica y media” para inspeccionarlas."
+	},
+	"completedWithStatus": {
+		"message": "Completado con estado $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"analyzeChain": {
+		"message": "Analizar cadena"
+	},
+	"copySummary": {
+		"message": "Copiar resumen"
+	},
+	"copied": {
+		"message": "¡Copiado!"
+	},
+	"copyFailed": {
+		"message": "No se pudo copiar la cadena de redirección al portapapeles."
+	},
+	"copyReport": {
+		"message": "Copiar informe de análisis"
+	},
+	"closeButton": {
+		"message": "Cerrar"
+	},
+
+	"classTracking": {
+		"message": "Tracking"
+	},
+	"classMedia": {
+		"message": "Media"
+	},
+	"relatedCount": {
+		"message": "+$COUNT$ relacionadas",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"labelMediaRequests": {
+		"message": "solicitudes de media"
+	},
+	"labelPixelRequests": {
+		"message": "solicitudes de píxel/analítica"
+	},
+	"labelMixedRequests": {
+		"message": "solicitudes de píxel/analítica y media"
+	},
+	"noiseSummaryHidden": {
+		"message": "$COUNT$ $LABEL$ ocultas",
+		"placeholders": {
+			"count": { "content": "$1" },
+			"label": { "content": "$2" }
+		}
+	},
+
+	"clearingStatus": {
+		"message": "Limpiando…"
+	},
+	"clearedStatus": {
+		"message": "Registro de redirecciones limpiado."
+	},
+	"clearFailed": {
+		"message": "No se pudieron limpiar las redirecciones."
+	},
+	"loadFailed": {
+		"message": "No se pudieron cargar las redirecciones guardadas."
+	},
+
+	"status301": {
+		"message": "Movido permanentemente"
+	},
+	"status302": {
+		"message": "Encontrado (temporal)"
+	},
+	"status303": {
+		"message": "Ver otro"
+	},
+	"status307": {
+		"message": "Redirección temporal"
+	},
+	"status308": {
+		"message": "Redirección permanente"
+	},
+	"statusHSTS": {
+		"message": "HSTS Upgrade"
+	},
+	"statusJS": {
+		"message": "Redirección del lado del cliente"
+	},
+
+	"drawerTitle": {
+		"message": "Análisis de cadena"
+	},
+	"hopsTitle": {
+		"message": "Saltos"
+	},
+	"noIssues": {
+		"message": "sin problemas"
+	},
+	"noIssuesDetail": {
+		"message": "No se detectaron problemas"
+	},
+	"errorOne": {
+		"message": "1 error"
+	},
+	"errorOther": {
+		"message": "$COUNT$ errores",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningOne": {
+		"message": "1 advertencia"
+	},
+	"warningOther": {
+		"message": "$COUNT$ advertencias",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoCount": {
+		"message": "$COUNT$ info",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"errorIssueTooltip": {
+		"message": "$COUNT$ problema(s) de nivel error",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningIssueTooltip": {
+		"message": "$COUNT$ problema(s) de nivel advertencia",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoIssueTooltip": {
+		"message": "$COUNT$ problema(s) informativos",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"finalUrl": {
+		"message": "Final: $URL$",
+		"placeholders": {
+			"url": { "content": "$1" }
+		}
+	},
+	"finalStatus": {
+		"message": "Estado: $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"welcomeTitle": {
+		"message": "Bienvenido a Redirect Inspector"
+	},
+	"welcomeHeading": {
+		"message": "Redirect Inspector"
+	},
+	"welcomeTagline": {
+		"message": "Descubre adónde van realmente tus clics."
+	},
+	"welcomeSubtitle": {
+		"message": "Visualiza cadenas de redirecciones HTTP en tiempo real — directamente en tu navegador."
+	},
+	"stepCapture": {
+		"message": "Captura"
+	},
+	"stepCaptureDesc": {
+		"message": "Cada cadena de redirección se registra mientras navegas."
+	},
+	"stepAnalyze": {
+		"message": "Analiza"
+	},
+	"stepAnalyzeDesc": {
+		"message": "Detecta bucles, tipos mixtos, rebotes de auth y saltos de CDN."
+	},
+	"stepExport": {
+		"message": "Exporta"
+	},
+	"stepExportDesc": {
+		"message": "Copia informes de análisis para compartir con tu equipo."
+	},
+	"tipsTitle": {
+		"message": "Consejos"
+	},
+	"tip1": {
+		"message": "Haz clic en el icono de la barra de herramientas para ver las cadenas capturadas"
+	},
+	"tip2": {
+		"message": "Usa la lupa para ejecutar el análisis de la cadena"
+	},
+	"tip3": {
+		"message": "Activa el filtro de ruido para ocultar solicitudes de tracking/media"
+	},
+	"tip4": {
+		"message": "Clic derecho en el icono → “Abrir en el panel lateral” para una vista persistente"
+	},
+	"ctaButton": {
+		"message": "Abrir Redirect Inspector"
+	},
+
+	"newsToggleLabel": {
+		"message": "Avisarme de las novedades de 301.sh"
+	},
+	"newsTitle": {
+		"message": "Mantente al día"
+	},
+	"newsDesc": {
+		"message": "Recibe una notificación del navegador cuando publiquemos nuevos análisis sobre redirecciones, DNS y HTTP en 301.sh. Desactivado por defecto: la extensión no hace solicitudes de red hasta que lo actives."
+	},
+	"newsEnableButton": {
+		"message": "Activar notificaciones de novedades"
+	},
+	"newsEnabledLabel": {
+		"message": "Las notificaciones de novedades están activadas."
 	}
 }

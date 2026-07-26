@@ -4,5 +4,297 @@
 	},
 	"extDescription": {
 		"message": "Console de redirections en temps réel : tracez les redirections serveur et client, détectez les boucles et le ping-pong, copiez des rapports."
+	},
+
+	"popupTitle": {
+		"message": "Redirect Inspector"
+	},
+	"pinSidePanel": {
+		"message": "Épingler au panneau latéral"
+	},
+	"clearButton": {
+		"message": "Effacer"
+	},
+	"toggleTheme": {
+		"message": "Changer de thème"
+	},
+	"noiseFilterLabel": {
+		"message": "Afficher les requêtes pixel, analytics et media"
+	},
+	"rateUs": {
+		"message": "Notez-nous"
+	},
+	"rateOnStore": {
+		"message": "Noter sur $STORE$",
+		"placeholders": {
+			"store": { "content": "$1" }
+		}
+	},
+	"sponsorTitle": {
+		"message": "301.st — Smart Traffic"
+	},
+	"craftedAt": {
+		"message": "Conçu chez"
+	},
+	"feedbackGithub": {
+		"message": "Retours et problèmes"
+	},
+	"telegramGroup": {
+		"message": "Communauté Telegram"
+	},
+
+	"unknownUrl": {
+		"message": "URL inconnue"
+	},
+	"unknownHost": {
+		"message": "Inconnu"
+	},
+	"noHopsRecorded": {
+		"message": "Aucun saut enregistré"
+	},
+	"hopOne": {
+		"message": "1 saut"
+	},
+	"hopOther": {
+		"message": "$COUNT$ sauts",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"chainOne": {
+		"message": "1 chaîne"
+	},
+	"chainOther": {
+		"message": "$COUNT$ chaînes",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"emptyState": {
+		"message": "Aucune chaîne de redirection capturée pour l'instant. Visitez un site qui déclenche une redirection."
+	},
+	"emptyStateFiltered": {
+		"message": "Seules des requêtes pixel/analytics/media ont été capturées. Activez « Afficher les requêtes pixel, analytics et media » pour les inspecter."
+	},
+	"completedWithStatus": {
+		"message": "Terminé avec le statut $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"analyzeChain": {
+		"message": "Analyser la chaîne"
+	},
+	"copySummary": {
+		"message": "Copier le résumé"
+	},
+	"copied": {
+		"message": "Copié !"
+	},
+	"copyFailed": {
+		"message": "Impossible de copier la chaîne de redirection dans le presse-papiers."
+	},
+	"copyReport": {
+		"message": "Copier le rapport d'analyse"
+	},
+	"closeButton": {
+		"message": "Fermer"
+	},
+
+	"classTracking": {
+		"message": "Tracking"
+	},
+	"classMedia": {
+		"message": "Media"
+	},
+	"relatedCount": {
+		"message": "+$COUNT$ liées",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"labelMediaRequests": {
+		"message": "requêtes media"
+	},
+	"labelPixelRequests": {
+		"message": "requêtes pixel/analytics"
+	},
+	"labelMixedRequests": {
+		"message": "requêtes pixel/analytics et media"
+	},
+	"noiseSummaryHidden": {
+		"message": "$COUNT$ $LABEL$ masquées",
+		"placeholders": {
+			"count": { "content": "$1" },
+			"label": { "content": "$2" }
+		}
+	},
+
+	"clearingStatus": {
+		"message": "Effacement…"
+	},
+	"clearedStatus": {
+		"message": "Journal des redirections effacé."
+	},
+	"clearFailed": {
+		"message": "Impossible d'effacer les redirections."
+	},
+	"loadFailed": {
+		"message": "Impossible de charger les redirections enregistrées."
+	},
+
+	"status301": {
+		"message": "Déplacé définitivement"
+	},
+	"status302": {
+		"message": "Trouvé (temporaire)"
+	},
+	"status303": {
+		"message": "Voir autre"
+	},
+	"status307": {
+		"message": "Redirection temporaire"
+	},
+	"status308": {
+		"message": "Redirection permanente"
+	},
+	"statusHSTS": {
+		"message": "Upgrade HSTS"
+	},
+	"statusJS": {
+		"message": "Redirection côté client"
+	},
+
+	"drawerTitle": {
+		"message": "Analyse de la chaîne"
+	},
+	"hopsTitle": {
+		"message": "Sauts"
+	},
+	"noIssues": {
+		"message": "aucun problème"
+	},
+	"noIssuesDetail": {
+		"message": "Aucun problème détecté"
+	},
+	"errorOne": {
+		"message": "1 erreur"
+	},
+	"errorOther": {
+		"message": "$COUNT$ erreurs",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningOne": {
+		"message": "1 avertissement"
+	},
+	"warningOther": {
+		"message": "$COUNT$ avertissements",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoCount": {
+		"message": "$COUNT$ info",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"errorIssueTooltip": {
+		"message": "$COUNT$ problème(s) de niveau erreur",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"warningIssueTooltip": {
+		"message": "$COUNT$ problème(s) de niveau avertissement",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"infoIssueTooltip": {
+		"message": "$COUNT$ problème(s) informatif(s)",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"finalUrl": {
+		"message": "Final : $URL$",
+		"placeholders": {
+			"url": { "content": "$1" }
+		}
+	},
+	"finalStatus": {
+		"message": "Statut : $STATUS$",
+		"placeholders": {
+			"status": { "content": "$1" }
+		}
+	},
+
+	"welcomeTitle": {
+		"message": "Bienvenue dans Redirect Inspector"
+	},
+	"welcomeHeading": {
+		"message": "Redirect Inspector"
+	},
+	"welcomeTagline": {
+		"message": "Voyez où mènent vraiment vos clics."
+	},
+	"welcomeSubtitle": {
+		"message": "Visualisez les chaînes de redirections HTTP en temps réel — directement dans votre navigateur."
+	},
+	"stepCapture": {
+		"message": "Capturer"
+	},
+	"stepCaptureDesc": {
+		"message": "Chaque chaîne de redirection est enregistrée pendant votre navigation."
+	},
+	"stepAnalyze": {
+		"message": "Analyser"
+	},
+	"stepAnalyzeDesc": {
+		"message": "Détecte les boucles, types mixtes, rebonds d'auth, sauts CDN."
+	},
+	"stepExport": {
+		"message": "Exporter"
+	},
+	"stepExportDesc": {
+		"message": "Copiez les rapports d'analyse à partager avec votre équipe."
+	},
+	"tipsTitle": {
+		"message": "Astuces"
+	},
+	"tip1": {
+		"message": "Cliquez sur l'icône de la barre d'outils pour voir les chaînes capturées"
+	},
+	"tip2": {
+		"message": "Utilisez la loupe pour lancer l'analyse de la chaîne"
+	},
+	"tip3": {
+		"message": "Basculez le filtre de bruit pour masquer les requêtes tracking/media"
+	},
+	"tip4": {
+		"message": "Clic droit sur l'icône → « Ouvrir dans le panneau latéral » pour une vue permanente"
+	},
+	"ctaButton": {
+		"message": "Ouvrir Redirect Inspector"
+	},
+
+	"newsToggleLabel": {
+		"message": "Me notifier des actualités 301.sh"
+	},
+	"newsTitle": {
+		"message": "Restez informé"
+	},
+	"newsDesc": {
+		"message": "Recevez une notification du navigateur quand nous publions de nouvelles analyses sur les redirections, le DNS et HTTP sur 301.sh. Désactivé par défaut — l'extension ne fait aucune requête réseau tant que vous n'avez pas activé l'option."
+	},
+	"newsEnableButton": {
+		"message": "Activer les notifications d'actualités"
+	},
+	"newsEnabledLabel": {
+		"message": "Les notifications d'actualités sont activées."
 	}
 }

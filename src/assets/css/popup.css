@@ -97,7 +97,9 @@ body.sidepanel {
   border-bottom: 1px solid var(--border-subtle, rgba(0,0,0,0.06));
   overflow: hidden;
   transition: max-height 0.3s ease, border-color 0.3s ease;
-  max-height: 4rem;
+  /* Animation ceiling for the scroll-collapse, not a sizing rule: must exceed
+     two wrapped toggle rows in the longest locale (de) and coarse-pointer rows. */
+  max-height: 8rem;
   z-index: 1;
 }
 

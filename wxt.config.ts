@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
-    version: '2.2.0',
+    version: '2.3.0',
     default_locale: 'en',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
@@ -16,8 +16,11 @@ export default defineConfig({
 
     permissions:
       browser === 'firefox'
-        ? ['webRequest', 'storage', 'tabs', 'webNavigation']
-        : ['webRequest', 'storage', 'tabs', 'webNavigation', 'sidePanel'],
+        ? ['webRequest', 'storage', 'webNavigation', 'alarms']
+        : ['webRequest', 'storage', 'webNavigation', 'alarms', 'sidePanel'],
+
+    // Opt-in 301.sh news: requested at runtime from a user gesture, never at install
+    optional_permissions: ['notifications'],
 
     host_permissions: ['<all_urls>'],
 

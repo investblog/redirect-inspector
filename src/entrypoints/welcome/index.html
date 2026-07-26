@@ -14,6 +14,7 @@
       <symbol id="i-mono-magnify" viewBox="0 0 20 20"><path d="M7.75 1.25a6.5 6.5 0 0 1 6.5 6.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27a6.52 6.52 0 0 1-4.23 1.56 6.5 6.5 0 1 1 0-13m0 2c-2.5 0-4.5 2-4.5 4.5s2 4.5 4.5 4.5 4.5-2 4.5-4.5-2-4.5-4.5-4.5" fill="currentColor"/></symbol>
       <symbol id="i-mono-filter" viewBox="0 0 20 20"><path d="M4 11h12V9H4M1 4v2h18V4M8 16h4v-2H8z" fill="currentColor"/></symbol>
       <symbol id="i-mono-puzzle" viewBox="0 0 20 20"><path d="M17.619 9.524h-1.428v-3.81a1.904 1.904 0 0 0-1.905-1.904h-3.81V2.38a2.381 2.381 0 0 0-4.762.001V3.81h-3.81A1.905 1.905 0 0 0 0 5.714v3.62h1.429A2.56 2.56 0 0 1 4 11.903a2.56 2.56 0 0 1-2.571 2.572H0v3.62A1.905 1.905 0 0 0 1.905 20h3.619v-1.429A2.56 2.56 0 0 1 8.095 16a2.56 2.56 0 0 1 2.572 2.571V20h3.619a1.905 1.905 0 0 0 1.905-1.905v-3.81h1.428a2.38 2.38 0 1 0 0-4.761" fill="currentColor"/></symbol>
+      <symbol id="i-mono-bell" viewBox="0 0 20 20"><path d="M10 20a2 2 0 0 0 2-2H8a2 2 0 0 0 2 2m6-6V9c0-3.07-1.63-5.64-4.5-6.32V2a1.5 1.5 0 0 0-3 0v.68C5.64 3.36 4 5.92 4 9v5l-2 2v1h16v-1z" fill="currentColor"/></symbol>
     </svg>
 
     <main class="welcome">
@@ -67,6 +68,23 @@
             <span data-i18n="tip4">Right-click the icon &rarr; &ldquo;Open in side panel&rdquo; for persistent view</span>
           </li>
         </ul>
+      </section>
+
+      <section class="welcome__news">
+        <div class="welcome__news-head">
+          <svg class="welcome__news-icon" aria-hidden="true"><use href="#i-mono-bell"></use></svg>
+          <h2 class="welcome__news-title" data-i18n="newsTitle">Stay in the loop</h2>
+        </div>
+        <p class="welcome__news-desc" data-i18n="newsDesc">
+          Get a browser notification when we publish new redirect, DNS &amp; HTTP deep-dives on 301.sh.
+          Off by default &mdash; the extension makes no network requests until you opt in.
+        </p>
+        <button id="news-enable" class="welcome__news-btn" type="button" data-i18n="newsEnableButton">
+          Enable news notifications
+        </button>
+        <p id="news-status" class="welcome__news-status" hidden data-i18n="newsEnabledLabel">
+          News notifications are on.
+        </p>
       </section>
 
       <div class="welcome__action">

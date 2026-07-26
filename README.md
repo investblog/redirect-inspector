@@ -18,7 +18,9 @@ Real-time redirect console for developers — trace server & client redirects, r
 - **Side panel** — persistent view alongside your page (Chrome/Edge sidePanel API, Firefox sidebar_action)
 - **Dark & light theme** — follows system preference or toggle manually
 - **One-click export** — copy chain summary or full analysis report to clipboard
-- **Fully local** — no accounts, no analytics, no network requests, no data leaves your browser
+- **7 languages** — English, Spanish, German, French, Brazilian Portuguese, Turkish, Russian
+- **Fully local** — no accounts, no analytics, no network requests by default, no data leaves your browser
+- **Optional 301.sh news** — opt-in browser notifications for new redirect/DNS/HTTP articles on [301.sh](https://301.sh); off by default, the `notifications` permission is requested only when you enable it
 
 ## Install
 
@@ -61,7 +63,9 @@ npm run check          # Typecheck + lint + test
 
 ## Privacy
 
-Redirect Inspector makes zero network requests. No analytics, no telemetry, no remote code. Redirect data is stored in `browser.storage.local` and never leaves the browser. The only persisted preferences are theme and noise-filter toggle.
+Redirect Inspector makes zero network requests by default. No analytics, no telemetry, no remote code. Redirect data is stored in `browser.storage.local` and never leaves the browser. The persisted preferences are theme, noise-filter, and news toggles.
+
+The only optional network activity is the 301.sh news feed: if (and only if) you enable news notifications, the extension fetches `https://301.sh/posts.json` a few times a day to show a browser notification about new articles. Nothing is ever sent — the request carries no identifiers or browsing data, and disabling the toggle stops it entirely.
 
 ## Related
 

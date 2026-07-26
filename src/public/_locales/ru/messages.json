@@ -280,5 +280,21 @@
 	},
 	"ctaButton": {
 		"message": "Открыть Redirect Inspector"
+	},
+
+	"newsToggleLabel": {
+		"message": "Уведомлять о новостях 301.sh"
+	},
+	"newsTitle": {
+		"message": "Будьте в курсе"
+	},
+	"newsDesc": {
+		"message": "Получайте уведомление браузера, когда мы публикуем новые разборы про redirect, DNS и HTTP на 301.sh. По умолчанию выключено — расширение не делает сетевых запросов, пока вы не включите."
+	},
+	"newsEnableButton": {
+		"message": "Включить уведомления о новостях"
+	},
+	"newsEnabledLabel": {
+		"message": "Уведомления о новостях включены."
 	}
 }

@@ -37,3 +37,5 @@ export {
 } from './classify';
 
 export * from './helpers';
+
+export { checkNews, disableNewsAlarm, enableNewsAlarm, setupNews } from './news';
