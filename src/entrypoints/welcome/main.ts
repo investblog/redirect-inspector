@@ -62,14 +62,23 @@ newsBtn?.addEventListener('click', async () => {
   }
 });
 
-// ---- CTA ----
+// ---- CTA: open the side panel (the default surface), popup as fallback ----
 const ctaBtn = document.getElementById('cta');
 ctaBtn?.addEventListener('click', async () => {
   try {
+    if ((browser as any).sidebarAction?.open) {
+      await (browser as any).sidebarAction.open();
+      return;
+    }
+    if ((browser as any).sidePanel?.open) {
+      const currentWindow = await browser.windows.getCurrent();
+      await (browser as any).sidePanel.open({ windowId: currentWindow.id });
+      return;
+    }
     await (browser.action as any).openPopup();
   } catch {
-    // openPopup() may not be available (Firefox, or called outside user gesture).
-    // Close the welcome tab instead — the user can click the toolbar icon.
+    // No side panel API and openPopup unavailable outside the action context —
+    // close the welcome tab instead; the toolbar icon is the entry point.
     window.close();
   }
 });

@@ -18,6 +18,11 @@ import { REDIRECT_LOG_KEY, WEB_REQUEST_EXTRA_INFO_SPEC, WEB_REQUEST_FILTER } fro
 import { setNewsEnabled } from '../../shared/news';
 
 export default defineBackground(() => {
+  // ---- Chromium: icon click opens the side panel (popup is Firefox-only UX) ----
+  (browser as any).sidePanel
+    ?.setPanelBehavior?.({ openPanelOnActionClick: true })
+    .catch((error: unknown) => console.warn('setPanelBehavior failed', error));
+
   // ---- onInstalled: open welcome page on first install ----
   browser.runtime.onInstalled.addListener(({ reason }) => {
     if (reason === 'install') {

@@ -58,5 +58,16 @@ export default defineConfig({
     }),
   }),
 
+  hooks: {
+    'build:manifestGenerated': (wxt, manifest) => {
+      // Chromium: icon click opens the side panel (setPanelBehavior in the
+      // background); a default_popup would take precedence over it, so drop it.
+      // Firefox keeps the popup — its icon can't open the sidebar natively.
+      if (wxt.config.browser !== 'firefox' && manifest.action) {
+        delete (manifest.action as { default_popup?: string }).default_popup;
+      }
+    },
+  },
+
   browser: 'chrome',
 });
