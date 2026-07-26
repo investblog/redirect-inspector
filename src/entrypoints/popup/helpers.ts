@@ -28,7 +28,9 @@ export type IconName =
   | 'check-circle'
   | 'cube-scan'
   | 'github'
-  | 'telegram';
+  | 'telegram'
+  | 'bell'
+  | 'bell-off';
 
 /**
  * Create an SVG element that references a symbol from the inline sprite.

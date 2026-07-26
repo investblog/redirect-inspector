@@ -313,6 +313,12 @@ body.sidepanel {
   display: block;
 }
 
+/* ---- News bell ---- */
+
+.news-toggle[aria-pressed='true'] {
+  color: var(--primary, #0055dc);
+}
+
 /* ---- Theme toggle ---- */
 
 .theme-toggle {

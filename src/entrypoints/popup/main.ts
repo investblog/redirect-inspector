@@ -40,7 +40,8 @@ let storageListenerRegistered = false;
 let statusEl: HTMLElement;
 let redirectListEl: HTMLElement;
 let showNoiseToggle: HTMLInputElement | null = null;
-let newsToggle: HTMLInputElement | null = null;
+let newsBtn: HTMLButtonElement | null = null;
+let newsEnabled = false;
 let noiseSummaryEl: HTMLElement | null = null;
 let themeToggleBtn: HTMLButtonElement | null = null;
 let popupBody: HTMLElement | null = null;
@@ -103,6 +104,17 @@ function buildUI(): void {
   clearBtn.addEventListener('click', clearRedirectLog);
   headerActions.appendChild(clearBtn);
 
+  // News notifications bell (mute/unmute 301.sh news)
+  newsBtn = document.createElement('button');
+  newsBtn.id = 'news-toggle';
+  newsBtn.className = 'pin-btn news-toggle';
+  newsBtn.type = 'button';
+  newsBtn.title = t('newsToggleLabel');
+  newsBtn.setAttribute('aria-label', t('newsToggleLabel'));
+  newsBtn.addEventListener('click', handleNewsToggleClick);
+  updateNewsIcon();
+  headerActions.appendChild(newsBtn);
+
   // Theme toggle
   themeToggleBtn = document.createElement('button');
   themeToggleBtn.id = 'theme-toggle';
@@ -147,21 +159,6 @@ function buildUI(): void {
   noiseSummaryEl.className = 'controls__summary';
   noiseSummaryEl.hidden = true;
   controls.appendChild(noiseSummaryEl);
-
-  const newsLabel = document.createElement('label');
-  newsLabel.className = 'controls__toggle';
-
-  newsToggle = document.createElement('input');
-  newsToggle.id = 'news-toggle';
-  newsToggle.type = 'checkbox';
-  newsToggle.addEventListener('change', handleNewsToggleChange);
-
-  const newsText = document.createElement('span');
-  newsText.textContent = t('newsToggleLabel');
-
-  newsLabel.appendChild(newsToggle);
-  newsLabel.appendChild(newsText);
-  controls.appendChild(newsLabel);
 
   popupControls.appendChild(controls);
   app.appendChild(popupControls);
@@ -615,32 +612,36 @@ async function handleShowNoiseChange(): Promise<void> {
   updatePopupHeight();
 }
 
-// ---- 301.sh news preference ----
+// ---- 301.sh news preference (bell in the header: unmuted = on) ----
 
-async function loadNewsPreference(): Promise<void> {
-  if (!newsToggle) return;
-  newsToggle.checked = (await getNewsEnabled()) && (await hasNotificationsPermission());
+function updateNewsIcon(): void {
+  if (!newsBtn) return;
+  newsBtn.replaceChildren(svgIcon(newsEnabled ? 'bell' : 'bell-off'));
+  newsBtn.setAttribute('aria-pressed', String(newsEnabled));
 }
 
-async function handleNewsToggleChange(): Promise<void> {
-  if (!newsToggle) return;
+async function loadNewsPreference(): Promise<void> {
+  newsEnabled = (await getNewsEnabled()) && (await hasNotificationsPermission());
+  updateNewsIcon();
+}
 
-  if (newsToggle.checked) {
+async function handleNewsToggleClick(): Promise<void> {
+  if (!newsEnabled) {
     const granted = await requestNotificationsPermission();
-    if (!granted) {
-      newsToggle.checked = false;
-      return;
-    }
+    if (!granted) return;
+
     const response = await sendMessageSafe<{ success: boolean }>({
       type: 'redirect-inspector:set-news-enabled',
       payload: { enabled: true },
     });
-    if (!response?.success) {
-      newsToggle.checked = false;
+    if (response?.success) {
+      newsEnabled = true;
+    } else {
       // Don't hold a granted-but-unused permission — that profile is exactly
       // what store reviews flag.
       browser.permissions.remove({ permissions: ['notifications'] }).catch(() => {});
     }
+    updateNewsIcon();
     return;
   }
 
@@ -650,6 +651,8 @@ async function handleNewsToggleChange(): Promise<void> {
   } catch {
     // Firefox may refuse to silently remove — the alarm is already off, so this is cosmetic.
   }
+  newsEnabled = false;
+  updateNewsIcon();
 }
 
 // ---- Export ----
