@@ -15,6 +15,7 @@
       <symbol id="i-mono-filter" viewBox="0 0 20 20"><path d="M4 11h12V9H4M1 4v2h18V4M8 16h4v-2H8z" fill="currentColor"/></symbol>
       <symbol id="i-mono-puzzle" viewBox="0 0 20 20"><path d="M17.619 9.524h-1.428v-3.81a1.904 1.904 0 0 0-1.905-1.904h-3.81V2.38a2.381 2.381 0 0 0-4.762.001V3.81h-3.81A1.905 1.905 0 0 0 0 5.714v3.62h1.429A2.56 2.56 0 0 1 4 11.903a2.56 2.56 0 0 1-2.571 2.572H0v3.62A1.905 1.905 0 0 0 1.905 20h3.619v-1.429A2.56 2.56 0 0 1 8.095 16a2.56 2.56 0 0 1 2.572 2.571V20h3.619a1.905 1.905 0 0 0 1.905-1.905v-3.81h1.428a2.38 2.38 0 1 0 0-4.761" fill="currentColor"/></symbol>
       <symbol id="i-mono-bell" viewBox="0 0 20 20"><path d="M10 20a2 2 0 0 0 2-2H8a2 2 0 0 0 2 2m6-6V9c0-3.07-1.63-5.64-4.5-6.32V2a1.5 1.5 0 0 0-3 0v.68C5.64 3.36 4 5.92 4 9v5l-2 2v1h16v-1z" fill="currentColor"/></symbol>
+      <symbol id="i-mono-open-in-new" viewBox="0 0 24 24"><path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z" fill="currentColor"/></symbol>
     </svg>
 
     <main class="welcome">
@@ -79,12 +80,21 @@
           Get a browser notification when we publish new redirect, DNS &amp; HTTP deep-dives on 301.sh.
           Off by default &mdash; the extension makes no network requests until you opt in.
         </p>
-        <button id="news-enable" class="welcome__news-btn" type="button" data-i18n="newsEnableButton">
-          Enable news notifications
-        </button>
-        <p id="news-status" class="welcome__news-status" hidden data-i18n="newsEnabledLabel">
-          News notifications are on.
-        </p>
+        <div class="welcome__news-actions">
+          <button id="news-enable" class="welcome__news-btn" type="button" data-i18n="newsEnableButton">
+            Enable news notifications
+          </button>
+          <p id="news-status" class="welcome__news-status" hidden data-i18n="newsEnabledLabel">
+            News notifications are on.
+          </p>
+          <a
+            class="welcome__news-link"
+            href="https://301.sh/?utm_source=redirect-inspector&amp;utm_medium=extension&amp;utm_campaign=welcome-news"
+            target="_blank"
+            rel="noopener"
+            aria-label="301.sh"
+          >301.sh<svg class="welcome__news-link-icon" aria-hidden="true"><use href="#i-mono-open-in-new"></use></svg></a>
+        </div>
       </section>
 
       <div class="welcome__action">

@@ -220,6 +220,32 @@ body {
   margin: 0;
 }
 
+.welcome__news-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.welcome__news-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--fs-sm, 0.875rem);
+  font-weight: var(--fw-semibold, 600);
+  color: var(--primary, #0055dc);
+  text-decoration: none;
+}
+
+.welcome__news-link:hover {
+  text-decoration: underline;
+}
+
+.welcome__news-link-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
 /* ---- CTA ---- */
 
 .welcome__action {
