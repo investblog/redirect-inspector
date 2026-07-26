@@ -1,9 +1,17 @@
 name: Release
 
+# Tags are cut by cut-release.yml (CI-only tagging contract). GITHUB_TOKEN-pushed
+# tags don't fire the push trigger, so cut-release dispatches this workflow with
+# the tag as input; the push trigger stays as a fallback for manually pushed tags.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and release (e.g. v2.3.0)'
+        required: true
 
 permissions:
   contents: write
@@ -15,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,7 +53,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           draft: false
           prerelease: false
           generate_release_notes: true

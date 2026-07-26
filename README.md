@@ -82,10 +82,19 @@ Built by [investblog](https://github.com/investblog) at [301.st](https://301.st)
 
 ## Releasing / store deploy
 
-Version lives **only** in `wxt.config.ts` (`manifest.version`); `package.json` is not
-used by the build. To release: bump it, then `git tag vX.Y.Z && git push origin vX.Y.Z`.
+Version lives in `wxt.config.ts` (`manifest.version`) and must match `package.json`
+(the cut-release workflow enforces this).
 
-A `v*` tag drives two workflows:
+**Tagging contract: `v*` tags are cut only by CI, never locally.** To release:
+bump the version, push to `main`, then run the **Cut release** workflow
+(Actions → *Cut release*, or `gh workflow run cut-release.yml`). It re-runs the
+full quality gate and the build on a Linux runner — so no Windows working-copy
+artifact (CRLF, path separators, locale-dependent tooling) can reach a release —
+then creates the tag and dispatches the workflows below. The optional `submit`
+input auto-submits to a store; default is `none`.
+
+A `v*` tag drives two workflows (dispatched by cut-release, since
+GITHUB_TOKEN-pushed tags don't fire push triggers):
 - `release.yml` — typecheck/lint/test + a GitHub release with the built ZIPs.
 - `submit.yml` — a thin caller of the **shared reusable workflow**
   `investblog/geo-tier-builder/.github/workflows/store-submit.yml@main`.
