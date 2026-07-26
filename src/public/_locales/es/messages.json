@@ -1,9 +1,9 @@
 {
 	"extName": {
-		"message": "Redirect Inspector — Consola de Redirecciones"
+		"message": "Redirect Inspector — Verificador de Enlaces"
 	},
 	"extDescription": {
-		"message": "Consola de redirecciones en tiempo real: rastrea redirecciones del servidor y del cliente, detecta bucles y ping-pong, copia informes."
+		"message": "Verificador de redirecciones: sigue cadenas 301/302, expande enlaces cortos, detecta bucles y errores. Análisis local, sin rastreo."
 	},
 
 	"popupTitle": {

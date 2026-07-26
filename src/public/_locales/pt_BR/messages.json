@@ -1,9 +1,9 @@
 {
 	"extName": {
-		"message": "Redirect Inspector — Console de Redirects"
+		"message": "Redirect Inspector — Verificador de Redirects"
 	},
 	"extDescription": {
-		"message": "Console de redirecionamentos em tempo real: rastreie redirecionamentos de servidor e cliente, detecte loops e ping-pong, copie relatórios."
+		"message": "Verifique e rastreie redirecionamentos 301/302 ao vivo, expanda links curtos, detecte loops e erros. Análise local, zero tracking."
 	},
 
 	"popupTitle": {

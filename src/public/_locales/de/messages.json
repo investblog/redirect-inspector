@@ -1,9 +1,9 @@
 {
 	"extName": {
-		"message": "Redirect Inspector — Redirect-Konsole"
+		"message": "Redirect Inspector — Link- & Redirect-Checker"
 	},
 	"extDescription": {
-		"message": "Echtzeit-Redirect-Konsole: Server- und Client-Redirects verfolgen, Schleifen und Ping-Pong erkennen, Berichte kopieren."
+		"message": "Redirect-Checker: Weiterleitungen prüfen, 301/302-Ketten verfolgen, Kurzlinks auflösen, Schleifen finden. Lokal, kein Tracking."
 	},
 
 	"popupTitle": {

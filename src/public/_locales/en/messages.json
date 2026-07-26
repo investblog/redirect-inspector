@@ -1,9 +1,9 @@
 {
 	"extName": {
-		"message": "Redirect Inspector — Redirect Console"
+		"message": "Redirect Inspector — Link & Redirect Checker"
 	},
 	"extDescription": {
-		"message": "Real-time redirect console: trace server & client redirects, detect loops and ping-pong, copy clean reports."
+		"message": "Redirect checker & tracer: follow 301/302 chains live, expand short links, catch loops and errors. Local analysis, zero tracking."
 	},
 
 	"popupTitle": {

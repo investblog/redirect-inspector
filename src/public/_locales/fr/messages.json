@@ -1,9 +1,9 @@
 {
 	"extName": {
-		"message": "Redirect Inspector — Console de Redirections"
+		"message": "Redirect Inspector — Traceur de Redirections"
 	},
 	"extDescription": {
-		"message": "Console de redirections en temps réel : tracez les redirections serveur et client, détectez les boucles et le ping-pong, copiez des rapports."
+		"message": "Vérificateur de redirections : chaînes 301/302 en direct, liens courts dépliés, boucles et erreurs détectées. Local, zéro tracking."
 	},
 
 	"popupTitle": {
