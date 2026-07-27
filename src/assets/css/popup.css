@@ -28,6 +28,37 @@ body.sidepanel {
   height: 100vh;
 }
 
+/* ---- Side panel typography: roomier surface, one step larger type ---- */
+
+body.sidepanel {
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  font-size: 15px;
+}
+
+body.sidepanel .redirect-item__title {
+  font-size: 1.05rem;
+}
+
+body.sidepanel .redirect-step {
+  font-size: 0.875rem;
+}
+
+body.sidepanel .redirect-step__status {
+  font-size: 0.78rem;
+}
+
+body.sidepanel .redirect-step__status[data-status='HSTS'],
+body.sidepanel .redirect-step__status[data-status='0'] {
+  font-size: 0.72rem;
+}
+
+body.sidepanel .redirect-item__badge,
+body.sidepanel .hop-badge,
+body.sidepanel .controls__summary {
+  font-size: 12px;
+}
+
 /* ---- Layout ---- */
 
 .popup {
