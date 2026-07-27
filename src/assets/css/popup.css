@@ -813,13 +813,25 @@ body.sidepanel .controls__summary {
 }
 
 .satellite-item {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  display: grid;
+  gap: 4px;
   font-size: 0.75rem;
   line-height: 1.5;
   min-width: 0;
   padding: 2px 0;
+}
+
+.satellite-item__route {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.satellite-item__bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .satellite-item__title {

@@ -1008,6 +1008,11 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
 
   const events = normalizeEvents(record);
 
+  // Route row: status badge + fromHost -> toHost
+  const routeEl = document.createElement('div');
+  routeEl.className = 'satellite-item__route';
+  row.appendChild(routeEl);
+
   // Status badge (first event's status code)
   if (events.length > 0) {
     const statusEl = document.createElement('span');
@@ -1017,7 +1022,7 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
     statusEl.dataset.status = code;
     const hint = statusTitle(code);
     if (hint) statusEl.title = hint;
-    row.appendChild(statusEl);
+    routeEl.appendChild(statusEl);
   }
 
   // Route: fromHost → toHost (or just destination)
@@ -1032,18 +1037,20 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
     titleEl.textContent = toHost || fromHost || formatUrl(finalUrl);
   }
   titleEl.title = `${record.initialUrl || ''} \u2192 ${finalUrl}`;
-  row.appendChild(titleEl);
+  routeEl.appendChild(titleEl);
 
-  // Hop badge
-  row.appendChild(createHopBadge(events.length));
+  // Bottom row: hop badge + classification, mirroring the main card layout
+  const bottomEl = document.createElement('div');
+  bottomEl.className = 'satellite-item__bottom';
+  bottomEl.appendChild(createHopBadge(events.length));
 
-  // Classification meta (if applicable)
   if (record.classification === 'likely-tracking' || record.classification === 'likely-media') {
     const metaEl = document.createElement('span');
     metaEl.className = 'satellite-item__meta';
     metaEl.textContent = record.classification === 'likely-tracking' ? t('classTracking') : t('classMedia');
-    row.appendChild(metaEl);
+    bottomEl.appendChild(metaEl);
   }
+  row.appendChild(bottomEl);
 
   return row;
 }
