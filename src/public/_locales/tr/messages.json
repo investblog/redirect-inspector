@@ -300,5 +300,17 @@
 
 	"demoChain": {
 		"message": "Örnek"
+	},
+	"durationMs": {
+		"message": "$COUNT$ ms",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"durationSec": {
+		"message": "$COUNT$ sn",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
 	}
 }

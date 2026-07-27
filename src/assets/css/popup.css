@@ -338,6 +338,13 @@ body.sidepanel .controls__summary {
   background: var(--primary-soft, rgba(0,0,0,0.06));
 }
 
+.pin-btn:focus-visible,
+.theme-toggle:focus-visible,
+.satellite-section__toggle:focus-visible {
+  outline: 2px solid var(--primary, #0055dc);
+  outline-offset: 2px;
+}
+
 .pin-btn svg {
   width: 1.1rem;
   height: 1.1rem;
@@ -404,7 +411,9 @@ body.sidepanel .controls__summary {
 
 .redirect-list {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  /* Room for the timestamp legend overhanging the first card's top edge */
+  padding-top: 0.5rem;
   padding-bottom: var(--space-1);
 }
 
@@ -417,9 +426,37 @@ body.sidepanel .controls__summary {
   box-shadow: var(--shadow-sm);
   display: grid;
   gap: var(--space-2);
-  overflow: hidden;
+  position: relative;
   min-width: 0;
   transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+/* Timestamp as a fieldset-legend: sits on the card's top edge, costs no height */
+.redirect-item:not(.redirect-item--pending) .redirect-item__timestamp {
+  position: absolute;
+  top: 0;
+  left: var(--space-3);
+  transform: translateY(-55%);
+  background: var(--bg-elevated, #fff);
+  padding: 0 6px;
+  border-radius: var(--r-pill, 999px);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--text-subtle, #8a8f99);
+  white-space: nowrap;
+}
+
+/* Bottom row: hop count + duration, right above the final status line */
+.redirect-item__bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.redirect-item__duration {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--text-muted, #6b7280);
 }
 
 .redirect-item:hover {
@@ -1160,6 +1197,13 @@ body.sidepanel .controls__summary {
   white-space: nowrap;
   min-width: 0;
   flex: 1;
+}
+
+.analysis-hop__delta {
+  font-size: var(--fs-xs, 0.75rem);
+  color: var(--text-subtle, #8a8f99);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .analysis-hop__tags {

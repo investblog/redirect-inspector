@@ -300,5 +300,17 @@
 
 	"demoChain": {
 		"message": "Beispiel"
+	},
+	"durationMs": {
+		"message": "$COUNT$ ms",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
+	},
+	"durationSec": {
+		"message": "$COUNT$ s",
+		"placeholders": {
+			"count": { "content": "$1" }
+		}
 	}
 }

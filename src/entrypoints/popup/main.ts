@@ -12,7 +12,7 @@ import { getStoreInfo } from '../../shared/store-links';
 import { getTheme, initTheme, toggleTheme } from '../../shared/theme';
 import type { RedirectEvent, RedirectRecord } from '../../shared/types/redirect';
 import { createAnalysisDrawer } from './components/analysis-drawer';
-import { statusTitle, svg301Logo, svgIcon } from './helpers';
+import { hopEndpointLabels, statusTitle, svg301Logo, svgIcon } from './helpers';
 import { buildSessionGroups, NOISE_CLASSIFICATIONS, recordTimestamp, type SessionGroup } from './session-groups';
 
 // ---- Mode detection ----
@@ -169,6 +169,7 @@ function buildUI(): void {
 
   statusEl = document.createElement('section');
   statusEl.id = 'status';
+  statusEl.setAttribute('aria-live', 'polite');
   statusEl.hidden = true;
   popupBody.appendChild(statusEl);
 
@@ -780,9 +781,11 @@ function renderRedirectStep(step: RedirectEvent): HTMLLIElement {
   if (hint) statusBadge.title = hint;
   li.appendChild(statusBadge);
 
+  const labels = hopEndpointLabels(step.from, step.to);
+
   const fromHost = document.createElement('span');
   fromHost.className = 'redirect-step__host';
-  fromHost.textContent = getHost(step.from) || formatUrl(step.from);
+  fromHost.textContent = labels.from || getHost(step.from) || formatUrl(step.from);
   fromHost.title = step.from || '';
   li.appendChild(fromHost);
 
@@ -794,12 +797,21 @@ function renderRedirectStep(step: RedirectEvent): HTMLLIElement {
 
     const toHost = document.createElement('span');
     toHost.className = 'redirect-step__to';
-    toHost.textContent = getHost(step.to) || formatUrl(step.to);
+    toHost.textContent = labels.to || getHost(step.to) || formatUrl(step.to);
     toHost.title = step.to;
     li.appendChild(toHost);
   }
 
   return li;
+}
+
+/** Human chain duration; empty string when timestamps are absent or implausible. */
+function formatChainDuration(record: RedirectRecord): string {
+  const start = Date.parse(record.initiatedAt ?? '');
+  const end = Date.parse(record.completedAt ?? '');
+  const ms = end - start;
+  if (!Number.isFinite(ms) || ms <= 0 || ms > 5 * 60 * 1000) return '';
+  return ms < 1000 ? t('durationMs', String(ms)) : t('durationSec', (ms / 1000).toFixed(1));
 }
 
 function normalizeEvents(record: RedirectRecord): RedirectEvent[] {
@@ -867,17 +879,18 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   titleEl.textContent = formatUrl(titleUrl);
   titleEl.title = titleUrl;
 
+  // Timestamp becomes a "legend" pinned on the card's top border (costs no height)
   const timestampEl = clone.querySelector('.redirect-item__timestamp') as HTMLElement;
   const completedAt = record.completedAt || events.at(-1)?.timestamp || record.initiatedAt;
   timestampEl.textContent = completedAt ? formatTime(completedAt) : '';
   timestampEl.title = completedAt ? new Date(completedAt).toLocaleString() : '';
+  rootEl.appendChild(timestampEl);
 
-  // Hide tab ID (rarely useful) — keep hops
+  // Hide tab ID (rarely useful); hop badge moves to the bottom row
   const tabEl = clone.querySelector('.redirect-item__tab') as HTMLElement;
   tabEl.remove();
-
   const hopsEl = clone.querySelector('.redirect-item__hops') as HTMLElement;
-  hopsEl.replaceWith(createHopBadge(events.length));
+  hopsEl.remove();
 
   const metaEl = clone.querySelector('.redirect-item__meta') as HTMLElement;
 
@@ -911,10 +924,28 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     metaEl.appendChild(classificationEl);
   }
 
+  // Meta row now holds only optional chips (initiator/demo/classification)
+  if (metaEl.childElementCount === 0) {
+    metaEl.remove();
+  }
+
   const stepsEl = clone.querySelector('.redirect-item__steps') as HTMLElement;
   events.forEach((step) => {
     stepsEl.appendChild(renderRedirectStep(step));
   });
+
+  // Bottom row: hop count (+ duration) right above the final status line
+  const bottomEl = document.createElement('div');
+  bottomEl.className = 'redirect-item__bottom';
+  bottomEl.appendChild(createHopBadge(events.length));
+  const duration = formatChainDuration(record);
+  if (duration) {
+    const durationEl = document.createElement('span');
+    durationEl.className = 'redirect-item__duration';
+    durationEl.textContent = duration;
+    bottomEl.appendChild(durationEl);
+  }
+  stepsEl.insertAdjacentElement('afterend', bottomEl);
 
   // Analyze button
   const headingEl = clone.querySelector('.redirect-item__heading') as HTMLElement;

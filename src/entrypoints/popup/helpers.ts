@@ -73,6 +73,40 @@ export function statusTitle(code: string): string {
   return key ? t(key) : '';
 }
 
+/**
+ * Labels for a hop's endpoints. Same-host hops (http->https, trailing slash,
+ * path rewrites) would render as "host -> host" and convey nothing — show the
+ * part that actually changed instead.
+ */
+export function hopEndpointLabels(from: string | undefined, to: string | undefined): { from: string; to: string } {
+  let fromUrl: URL | null = null;
+  let toUrl: URL | null = null;
+  try {
+    if (from) fromUrl = new URL(from);
+    if (to) toUrl = new URL(to);
+  } catch {
+    fromUrl = toUrl = null;
+  }
+
+  const fromHost = fromUrl?.host || from || '';
+  const toHost = toUrl?.host || to || '';
+  if (!fromUrl || !toUrl || fromHost !== toHost) {
+    return { from: fromHost, to: toHost };
+  }
+
+  if (fromUrl.protocol !== toUrl.protocol) {
+    return { from: `${fromUrl.protocol}//${fromHost}`, to: `${toUrl.protocol}//${toHost}` };
+  }
+
+  const fromPath = fromUrl.pathname + fromUrl.search;
+  const toPath = toUrl.pathname + toUrl.search;
+  if (fromPath !== toPath) {
+    return { from: fromPath || '/', to: toPath || '/' };
+  }
+
+  return { from: fromHost, to: toHost };
+}
+
 /** 301.st brand logo — filled SVG */
 export function svg301Logo(size = 16): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

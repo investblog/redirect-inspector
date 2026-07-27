@@ -1,7 +1,7 @@
 import type { AnalysisResult } from '../../../shared/analysis/types';
 import { t, tPlural } from '../../../shared/i18n';
 import type { RedirectRecord } from '../../../shared/types/redirect';
-import { el, severityIcon, statusTitle, svgIcon } from '../helpers';
+import { el, hopEndpointLabels, severityIcon, statusTitle, svgIcon } from '../helpers';
 
 function getHost(url: string | undefined): string {
   try {
@@ -56,17 +56,35 @@ function formatAnalysisReport(record: RedirectRecord, result: AnalysisResult): s
 
 export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisResult, onClose: () => void): HTMLElement {
   const drawer = el('aside', 'drawer');
+  const restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  const close = (): void => {
+    document.removeEventListener('keydown', onKeydown);
+    drawer.remove();
+    restoreFocusTo?.focus();
+    onClose();
+  };
+
+  const onKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      close();
+    }
+  };
+  document.addEventListener('keydown', onKeydown);
 
   // Overlay
   const overlay = el('div', 'drawer__overlay');
-  overlay.addEventListener('click', () => {
-    drawer.remove();
-    onClose();
-  });
+  overlay.addEventListener('click', close);
   drawer.appendChild(overlay);
 
   // Panel
   const panel = el('div', 'drawer__panel');
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', t('drawerTitle'));
+  panel.tabIndex = -1;
+  queueMicrotask(() => panel.focus());
 
   // -- Header --
   const header = el('div', 'drawer__header');
@@ -108,10 +126,7 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   closeBtn.title = t('closeButton');
   closeBtn.setAttribute('aria-label', t('closeButton'));
   closeBtn.appendChild(svgIcon('close'));
-  closeBtn.addEventListener('click', () => {
-    drawer.remove();
-    onClose();
-  });
+  closeBtn.addEventListener('click', close);
   headerActions.appendChild(closeBtn);
 
   header.appendChild(headerActions);
@@ -226,12 +241,20 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
       if (hint) status.title = hint;
       row.appendChild(status);
 
-      const fromHost = getHost(ev.from) || '?';
-      const toHost = getHost(ev.to) || '';
+      const labels = hopEndpointLabels(ev.from, ev.to);
+      const fromLabel = labels.from || getHost(ev.from) || '?';
+      const toLabel = labels.to || getHost(ev.to) || '';
       const hosts = el('span', 'analysis-hop__hosts');
-      hosts.textContent = toHost ? `${fromHost} \u2192 ${toHost}` : fromHost;
+      hosts.textContent = toLabel ? `${fromLabel} \u2192 ${toLabel}` : fromLabel;
       hosts.title = `${ev.from || ''} \u2192 ${ev.to || ''}`;
       row.appendChild(hosts);
+
+      // Per-hop time delta when both timestamps were captured
+      const prevTs = i > 0 ? events[i - 1].timestampMs : Date.parse(record.initiatedAt ?? '');
+      const delta = typeof ev.timestampMs === 'number' && Number.isFinite(prevTs) ? ev.timestampMs - prevTs! : NaN;
+      if (Number.isFinite(delta) && delta >= 0 && delta < 5 * 60 * 1000) {
+        row.appendChild(el('span', 'analysis-hop__delta', `+${Math.round(delta)} ms`));
+      }
 
       if (ann && ann.tags.length > 0) {
         const hopTags = el('span', 'analysis-hop__tags');
