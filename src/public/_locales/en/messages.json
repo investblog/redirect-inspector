@@ -356,5 +356,18 @@
 	},
 	"checkUrlTitle": {
 		"message": "Check a URL"
+	},
+
+	"tipCheckUrl": {
+		"message": "Pull the bottom handle to check any URL's redirects"
+	},
+	"promoTitle": {
+		"message": "More control with 301.st"
+	},
+	"promoText": {
+		"message": "301.st, the service behind this extension, manages and monitors redirects on your domains and tracks affiliate sales. The free plan lets you trace your traffic all the way to conversions."
+	},
+	"promoCta": {
+		"message": "Try 301.st for free"
 	}
 }

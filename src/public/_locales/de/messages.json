@@ -356,5 +356,18 @@
 	},
 	"checkUrlTitle": {
 		"message": "URL prüfen"
+	},
+
+	"tipCheckUrl": {
+		"message": "Öffnen Sie das untere Panel, um die Redirects einer beliebigen URL zu prüfen"
+	},
+	"promoTitle": {
+		"message": "Mehr Kontrolle mit 301.st"
+	},
+	"promoText": {
+		"message": "301.st, der Dienst hinter dieser Erweiterung, verwaltet und überwacht Redirects auf Ihren Domains und trackt Affiliate-Verkäufe. Mit dem kostenlosen Plan verfolgen Sie Ihren Traffic bis zur Conversion."
+	},
+	"promoCta": {
+		"message": "301.st kostenlos testen"
 	}
 }

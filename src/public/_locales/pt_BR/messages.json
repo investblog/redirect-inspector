@@ -356,5 +356,18 @@
 	},
 	"checkUrlTitle": {
 		"message": "Verificar uma URL"
+	},
+
+	"tipCheckUrl": {
+		"message": "Abra o painel inferior para verificar os redirecionamentos de qualquer URL"
+	},
+	"promoTitle": {
+		"message": "Mais controle com 301.st"
+	},
+	"promoText": {
+		"message": "O 301.st, serviço por trás desta extensão, gerencia e monitora redirecionamentos nos seus domínios e rastreia vendas de afiliados. O plano gratuito permite acompanhar seu tráfego até as conversões."
+	},
+	"promoCta": {
+		"message": "Experimente o 301.st grátis"
 	}
 }

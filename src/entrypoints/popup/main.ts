@@ -468,12 +468,37 @@ function openHelpDrawer(): void {
 
   const tips = document.createElement('ul');
   tips.className = 'help-tips';
-  for (const key of ['tip1', 'tip2', 'tip3', 'tip4']) {
+  for (const key of ['tip1', 'tip2', 'tip3', 'tip4', 'tipCheckUrl']) {
     const li = document.createElement('li');
     li.textContent = t(key);
     tips.appendChild(li);
   }
   body.appendChild(tips);
+
+  // 301.st promo — the service behind the extension
+  const promo = document.createElement('div');
+  promo.className = 'help-promo';
+
+  const promoTitle = document.createElement('h3');
+  promoTitle.className = 'help-promo__title';
+  promoTitle.appendChild(svg301Logo(16));
+  promoTitle.appendChild(document.createTextNode(` ${t('promoTitle')}`));
+  promo.appendChild(promoTitle);
+
+  const promoText = document.createElement('p');
+  promoText.className = 'help-promo__text';
+  promoText.textContent = t('promoText');
+  promo.appendChild(promoText);
+
+  const promoCta = document.createElement('a');
+  promoCta.className = 'btn btn--primary help-promo__cta';
+  promoCta.href = 'https://301.st/?utm_source=redirect-inspector&utm_medium=extension&utm_campaign=help_drawer';
+  promoCta.target = '_blank';
+  promoCta.rel = 'noopener';
+  promoCta.textContent = t('promoCta');
+  promo.appendChild(promoCta);
+
+  body.appendChild(promo);
 
   panel.appendChild(body);
   drawer.appendChild(panel);

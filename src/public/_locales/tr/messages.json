@@ -356,5 +356,18 @@
 	},
 	"checkUrlTitle": {
 		"message": "URL kontrol et"
+	},
+
+	"tipCheckUrl": {
+		"message": "Herhangi bir URL'nin yönlendirmelerini kontrol etmek için alt paneli açın"
+	},
+	"promoTitle": {
+		"message": "301.st ile daha fazla kontrol"
+	},
+	"promoText": {
+		"message": "Bu uzantının arkasındaki hizmet olan 301.st, alan adlarınızdaki yönlendirmeleri yönetir ve izler, affiliate satışlarını takip eder. Ücretsiz plan, trafiğinizi satışlara kadar izlemenizi sağlar."
+	},
+	"promoCta": {
+		"message": "301.st'yi ücretsiz deneyin"
 	}
 }

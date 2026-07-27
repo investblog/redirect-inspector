@@ -181,8 +181,8 @@ body.sidepanel .controls__summary {
 .controls__search {
   flex: 1 1 100%;
   min-width: 0;
-  margin-top: 6px;
-  padding: 4px 8px;
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
   font: inherit;
   font-size: var(--fs-xs, 0.75rem);
   color: var(--text, #111);
@@ -504,6 +504,9 @@ body.sidepanel .controls__summary {
 
 .dock__form {
   display: flex;
+  /* Without this the button stretches to the input's height and outsizes
+     its header twin (flex default align-items: stretch) */
+  align-items: center;
   gap: var(--space-2);
   min-width: 0;
 }
@@ -511,7 +514,7 @@ body.sidepanel .controls__summary {
 .dock__input {
   flex: 1;
   min-width: 0;
-  padding: 6px 10px;
+  padding: var(--space-1) var(--space-2);
   font: inherit;
   font-size: var(--fs-sm, 0.875rem);
   color: var(--text, #111);
@@ -578,6 +581,34 @@ body.sidepanel .controls__summary {
   gap: var(--space-1);
   font-size: var(--fs-sm, 0.875rem);
   color: var(--text-muted, #6b7280);
+}
+
+.help-promo {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  border-radius: var(--radius-xl, 0.75rem);
+  background: var(--bg-soft, #f4f8fc);
+}
+
+.help-promo__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm, 0.875rem);
+  font-weight: var(--fw-semibold, 600);
+}
+
+.help-promo__text {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-sm, 0.875rem);
+  line-height: 1.45;
+  color: var(--text-muted, #6b7280);
+}
+
+.help-promo__cta {
+  text-decoration: none;
 }
 
 .popup__help-btn {
