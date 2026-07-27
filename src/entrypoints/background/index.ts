@@ -14,6 +14,7 @@ import {
   seedDemoRecordIfEmpty,
   serializeChainPreview,
   setupNews,
+  setupProbe,
   startUrlProbe,
 } from '../../background';
 import { REDIRECT_LOG_KEY, WEB_REQUEST_EXTRA_INFO_SPEC, WEB_REQUEST_FILTER } from '../../background/helpers';
@@ -146,4 +147,7 @@ export default defineBackground(() => {
 
   // ---- 301.sh news (opt-in) ----
   setupNews();
+
+  // ---- Manual URL probes: sweep tabs orphaned by an SW restart ----
+  setupProbe();
 });

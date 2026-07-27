@@ -349,5 +349,12 @@
 	},
 	"shortcutClose": {
 		"message": "Fermer les dialogues"
+	},
+
+	"noMatches": {
+		"message": "Aucune chaîne ne correspond au filtre."
+	},
+	"checkUrlTitle": {
+		"message": "Vérifier une URL"
 	}
 }

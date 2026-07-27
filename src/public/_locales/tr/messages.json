@@ -349,5 +349,12 @@
 	},
 	"shortcutClose": {
 		"message": "Pencereleri kapat"
+	},
+
+	"noMatches": {
+		"message": "Filtreyle eşleşen zincir yok."
+	},
+	"checkUrlTitle": {
+		"message": "URL kontrol et"
 	}
 }

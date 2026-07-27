@@ -349,5 +349,12 @@
 	},
 	"shortcutClose": {
 		"message": "Dialoge schließen"
+	},
+
+	"noMatches": {
+		"message": "Keine Kette entspricht dem Filter."
+	},
+	"checkUrlTitle": {
+		"message": "URL prüfen"
 	}
 }

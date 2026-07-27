@@ -131,7 +131,8 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
     curlBtn.appendChild(svgIcon('console'));
     curlBtn.addEventListener('click', async () => {
       try {
-        await navigator.clipboard.writeText(`curl -sIL '${curlUrl.replace(/'/g, "'\\''")}'`);
+        // GET (not -I/HEAD): some servers redirect differently or 405 on HEAD
+        await navigator.clipboard.writeText(`curl -sL -D - -o /dev/null '${curlUrl.replace(/'/g, "'\\''")}'`);
         curlBtn.title = t('copied');
         curlBtn.classList.add('drawer__copy--success');
         curlBtn.disabled = true;
@@ -158,8 +159,14 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `redirect-chain-${getHost(record.finalUrl || record.initialUrl) || 'export'}.json`;
+    const host = getHost(record.finalUrl || record.initialUrl)
+      .split(':')[0]
+      .replace(/[^a-z0-9.-]/gi, '');
+    link.download = `redirect-chain-${host || 'export'}.json`;
+    // Firefox requires the anchor to be in the document for programmatic click
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 5_000);
   });
   headerActions.appendChild(jsonBtn);

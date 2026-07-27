@@ -445,7 +445,7 @@ body.sidepanel .controls__summary {
   color: #fff;
 }
 
-/* ---- Empty state: URL check + tips ---- */
+/* ---- Empty state: inline tips ---- */
 
 .empty-panel {
   display: grid;
@@ -453,13 +453,62 @@ body.sidepanel .controls__summary {
   padding: var(--space-3) 0;
 }
 
-.empty-panel__form {
+/* Author display rules beat the UA [hidden] default — must be explicit */
+.empty-panel[hidden] {
+  display: none;
+}
+
+/* ---- Bottom dock: manual URL check behind a grab handle ---- */
+
+.dock {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  background: var(--bg-elevated, #f7f7f8);
+}
+
+.dock__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dock__handle:hover .dock__grip,
+.dock__handle:focus-visible .dock__grip {
+  background: var(--border-strong, rgba(0, 0, 0, 0.16));
+}
+
+.dock__handle:focus-visible {
+  outline: 2px solid var(--primary, #0055dc);
+  outline-offset: -2px;
+}
+
+.dock__grip {
+  width: 32px;
+  height: 4px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--border-subtle, rgba(0, 0, 0, 0.12));
+  transition: background var(--transition-fast);
+}
+
+.dock__body {
+  display: none;
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.dock--expanded .dock__body {
+  display: block;
+}
+
+.dock__form {
   display: flex;
   gap: var(--space-2);
   min-width: 0;
 }
 
-.empty-panel__input {
+.dock__input {
   flex: 1;
   min-width: 0;
   padding: 6px 10px;
@@ -472,7 +521,7 @@ body.sidepanel .controls__summary {
   outline: none;
 }
 
-.empty-panel__input:focus-visible {
+.dock__input:focus-visible {
   border-color: var(--input-border-focus, var(--primary, #0055dc));
 }
 

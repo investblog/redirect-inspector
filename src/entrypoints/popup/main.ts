@@ -4,6 +4,7 @@
  */
 
 import { browser } from 'wxt/browser';
+import { MAX_RECORDS } from '../../background/helpers';
 import { analyzeChain } from '../../shared/analysis/heuristics';
 import { t, tPlural } from '../../shared/i18n';
 import { sendMessageSafe } from '../../shared/messaging';
@@ -270,21 +271,81 @@ function buildUI(): void {
   countEl.className = 'popup__count';
   footer.appendChild(countEl);
 
+  dockEl = buildCheckDock();
+  app.appendChild(dockEl);
   app.appendChild(footer);
 }
 
-// ---- Empty state: URL check form + inline tips ----
+// ---- Empty state: inline tips ----
 
 function buildEmptyPanel(): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'empty-panel';
   panel.hidden = true;
 
+  const tips = document.createElement('ul');
+  tips.className = 'empty-panel__tips';
+  for (const key of ['tip1', 'tip2', 'tip3']) {
+    const li = document.createElement('li');
+    li.textContent = t(key);
+    tips.appendChild(li);
+  }
+  panel.appendChild(tips);
+
+  return panel;
+}
+
+// ---- Bottom dock: manual "check a URL" behind a grab handle (301-ui pattern) ----
+
+let dockEl: HTMLElement | null = null;
+let dockUserToggled = false;
+
+function expandCheckDock(): void {
+  // Auto-expand only until the user has expressed a preference.
+  if (dockEl && !dockUserToggled) {
+    dockEl.classList.add('dock--expanded');
+  }
+}
+
+function buildCheckDock(): HTMLElement {
+  const dock = document.createElement('aside');
+  dock.className = 'dock';
+
+  const handle = document.createElement('div');
+  handle.className = 'dock__handle';
+  handle.title = t('checkUrlTitle');
+  handle.setAttribute('role', 'button');
+  handle.setAttribute('aria-label', t('checkUrlTitle'));
+  handle.tabIndex = 0;
+  const grip = document.createElement('div');
+  grip.className = 'dock__grip';
+  handle.appendChild(grip);
+
+  const toggle = (): void => {
+    dockUserToggled = true;
+    dock.classList.toggle('dock--expanded');
+    if (dock.classList.contains('dock--expanded')) {
+      dock.querySelector<HTMLInputElement>('.dock__input')?.focus();
+    }
+    updatePopupHeight();
+  };
+  handle.addEventListener('click', toggle);
+  handle.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggle();
+    }
+  });
+  dock.appendChild(handle);
+
+  const body = document.createElement('div');
+  body.className = 'dock__body';
+
   const form = document.createElement('form');
-  form.className = 'empty-panel__form';
+  form.className = 'dock__form';
 
   const input = document.createElement('input');
-  input.className = 'empty-panel__input';
+  input.className = 'dock__input';
   input.type = 'text';
   input.placeholder = t('checkUrlPlaceholder');
   input.setAttribute('aria-label', t('checkUrlPlaceholder'));
@@ -293,7 +354,7 @@ function buildEmptyPanel(): HTMLElement {
   form.appendChild(input);
 
   const submit = document.createElement('button');
-  submit.className = 'btn btn--primary empty-panel__submit';
+  submit.className = 'btn btn--primary';
   submit.type = 'submit';
   submit.textContent = t('checkUrlButton');
   form.appendChild(submit);
@@ -317,18 +378,10 @@ function buildEmptyPanel(): HTMLElement {
       }
     })();
   });
-  panel.appendChild(form);
+  body.appendChild(form);
+  dock.appendChild(body);
 
-  const tips = document.createElement('ul');
-  tips.className = 'empty-panel__tips';
-  for (const key of ['tip1', 'tip2', 'tip3']) {
-    const li = document.createElement('li');
-    li.textContent = t(key);
-    tips.appendChild(li);
-  }
-  panel.appendChild(tips);
-
-  return panel;
+  return dock;
 }
 
 // ---- Help drawer (footer "?" icon and the Shift+/ shortcut) ----
@@ -448,7 +501,11 @@ function updatePopupHeight(): void {
     const controls = document.querySelector('.popup__controls') as HTMLElement | null;
     const footer = document.querySelector('.popup__footer') as HTMLElement | null;
 
-    const chromeH = (header?.offsetHeight ?? 0) + (controls?.offsetHeight ?? 0) + (footer?.offsetHeight ?? 0);
+    const chromeH =
+      (header?.offsetHeight ?? 0) +
+      (controls?.offsetHeight ?? 0) +
+      (footer?.offsetHeight ?? 0) +
+      (dockEl?.offsetHeight ?? 0);
     const contentH = popupBody?.scrollHeight ?? 0;
     const needed = chromeH + contentH;
 
@@ -779,14 +836,23 @@ function applyFilters(records: RedirectRecord[]): FilterContext {
 }
 
 function updateStatusForRecords({ total, visible, hidden, showingNoise }: FilterContext): void {
-  // Rich empty panel (URL check + tips) only when the log is truly empty,
-  // not when a search or the noise filter hid everything.
+  // Inline tips only when the log is truly empty, not when a search or the
+  // noise filter hid everything.
   if (emptyPanelEl) {
     emptyPanelEl.hidden = !(total === 0 && !searchQuery);
   }
+  if (total === 0 && !searchQuery) {
+    expandCheckDock();
+  }
+
+  // A live status action (Undo after Clear) must survive re-renders — the
+  // clear itself triggers a storage refresh that lands right after the offer.
+  if (statusEl.querySelector('.status__action')) {
+    return;
+  }
 
   if (total === 0) {
-    showStatus(searchQuery ? '' : t('emptyState'), 'info');
+    showStatus(searchQuery ? t('noMatches') : t('emptyState'), 'info');
     return;
   }
 
@@ -1397,15 +1463,21 @@ async function fetchRedirectLog(): Promise<void> {
   await loadRedirectLogFromStorage();
 }
 
+let undoOfferTimer: ReturnType<typeof setTimeout> | null = null;
+
 function showClearedWithUndo(): void {
   showStatusWithAction(t('clearedStatus'), 'success', t('undoButton'), () => {
     void undoClear();
   });
-  // The offer expires quietly; don't clobber a newer message.
-  setTimeout(() => {
+  // The offer expires quietly; don't clobber a newer message. A second Clear
+  // within the window replaces the previous offer and its timer.
+  if (undoOfferTimer) clearTimeout(undoOfferTimer);
+  undoOfferTimer = setTimeout(() => {
+    undoOfferTimer = null;
     lastClearedRecords = null;
     if (statusEl.querySelector('.status__action')) {
       showStatus('');
+      updateStatusForRecords(applyFilters(allRedirectRecords));
     }
   }, 10_000);
 }
@@ -1413,17 +1485,27 @@ function showClearedWithUndo(): void {
 async function undoClear(): Promise<void> {
   const records = lastClearedRecords;
   lastClearedRecords = null;
+  if (undoOfferTimer) {
+    clearTimeout(undoOfferTimer);
+    undoOfferTimer = null;
+  }
   if (!records || records.length === 0) {
     showStatus('');
     return;
   }
   try {
-    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: records });
-    allRedirectRecords = records;
+    // Merge, don't overwrite: chains captured after the clear must survive.
+    const stored = await browser.storage.local.get({ [REDIRECT_LOG_KEY]: [] });
+    const current = stored[REDIRECT_LOG_KEY] as RedirectRecord[];
+    const restoredIds = new Set(records.map((record) => record.id));
+    const merged = [...current.filter((record) => !restoredIds.has(record.id)), ...records].slice(0, MAX_RECORDS);
+    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: merged });
+    allRedirectRecords = merged;
     applyFilters(allRedirectRecords);
     updateFooterCount();
     updatePopupHeight();
     showStatus('');
+    updateStatusForRecords(applyFilters(allRedirectRecords));
   } catch (error) {
     console.error('Undo clear failed', error);
     showStatus(t('loadFailed'), 'error');
@@ -1431,7 +1513,9 @@ async function undoClear(): Promise<void> {
 }
 
 async function clearRedirectLog(): Promise<void> {
-  lastClearedRecords = allRedirectRecords.length > 0 ? allRedirectRecords.slice() : null;
+  // Pending previews are transient — restoring them would plant stuck entries.
+  const snapshot = allRedirectRecords.filter((record) => !record.pending);
+  lastClearedRecords = snapshot.length > 0 ? snapshot : null;
   showStatus(t('clearingStatus'), 'info');
 
   const response = await sendMessageSafe<{ success: boolean }>({
@@ -1506,8 +1590,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Global shortcuts: "/" focuses the filter, "?" opens help (Esc lives in the drawers)
   document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    if (hasOpenOverlay()) return;
     const target = event.target as HTMLElement | null;
-    const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+    const typing =
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement;
     if (typing) return;
     if (event.key === '/') {
       event.preventDefault();

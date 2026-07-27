@@ -349,5 +349,12 @@
 	},
 	"shortcutClose": {
 		"message": "Закрыть диалоги"
+	},
+
+	"noMatches": {
+		"message": "Ни одна цепочка не подходит под фильтр."
+	},
+	"checkUrlTitle": {
+		"message": "Проверить URL"
 	}
 }

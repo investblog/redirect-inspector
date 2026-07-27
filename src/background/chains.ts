@@ -30,7 +30,7 @@ import {
   REDIRECT_LOG_KEY,
   sameHost,
 } from './helpers';
-import { closeProbeTab, probeTabIds } from './probe';
+import { closeProbeTab, handleProbeDirectCompletion, probeTabs } from './probe';
 
 // ---- State Maps ----
 
@@ -391,15 +391,19 @@ async function finalizeChainRecord(chainId: string): Promise<void> {
 
   chain.pendingFinalDetails = null;
 
-  // Manual "check a URL" probe: flag the record and close its helper tab
-  if (typeof chain.tabId === 'number' && probeTabIds.has(chain.tabId)) {
+  // Manual "check a URL" probe: only the TOP-LEVEL navigation is the probe
+  // result — sub-resource chains in the same tab (redirecting pixels etc.)
+  // must neither get the flag nor close the tab mid-flight.
+  if (typeof chain.tabId === 'number' && probeTabs.has(chain.tabId) && details.type === 'main_frame') {
     record.manual = true;
     closeProbeTab(chain.tabId);
   }
 
   const allEventsNoisy = preparedEvents.allEventsNoisy;
 
-  if (!allEventsNoisy) {
+  // Manually checked chains are always persisted — a user probing a tracker
+  // URL expects a result even when every hop is classified as noise.
+  if (!allEventsNoisy || record.manual) {
     await appendRedirectRecord(record);
     updateBadgeForRecord(record);
   }
@@ -741,6 +745,12 @@ export function handleBeforeRequest(details: chrome.webRequest.WebRequestBodyDet
 export function handleRequestCompleted(details: chrome.webRequest.WebResponseCacheDetails): void {
   try {
     finalizeChain(details);
+
+    // Probe URL that never redirected: no chain exists, so nothing would be
+    // recorded — let the probe module synthesize a zero-hop manual record.
+    if (details.type === 'main_frame' && !getChainByRequestId(details.requestId)) {
+      handleProbeDirectCompletion(details, (tabId) => tabChains.has(tabId));
+    }
   } catch (error) {
     console.error('Failed to finalize redirect chain', error, details);
   }

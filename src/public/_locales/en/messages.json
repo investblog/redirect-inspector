@@ -349,5 +349,12 @@
 	},
 	"shortcutClose": {
 		"message": "Close dialogs"
+	},
+
+	"noMatches": {
+		"message": "No chains match your filter."
+	},
+	"checkUrlTitle": {
+		"message": "Check a URL"
 	}
 }
