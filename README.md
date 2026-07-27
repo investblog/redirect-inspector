@@ -11,14 +11,17 @@ Real-time redirect console for developers — trace server & client redirects, r
 
 ## Features
 
-- **Real-time capture** — every server redirect (301, 302, 307, 308) and client-side navigation (JS, meta-refresh) recorded as it happens
+- **Real-time capture** — every server redirect (301, 302, 307, 308), HSTS upgrade, and client-side navigation (JS, meta-refresh) recorded as it happens
+- **Check any URL** — paste a URL into the bottom dock; it opens in an invisible background tab, the chain is captured through the normal pipeline, and the tab closes itself
 - **Session grouping** — chains from the same browsing session grouped by tab, time, and domain affinity
 - **9-heuristic analysis** — loops, ping-pong, long chains, mixed types, auth bounces, locale/consent, tracking noise, CDN detection, final outcome
-- **Noise filtering** — tracking pixels, analytics beacons, and media sub-requests hidden by default with one-click toggle
-- **Side panel** — persistent view alongside your page (Chrome/Edge sidePanel API, Firefox sidebar_action)
+- **Timing** — total chain duration on every card, per-hop deltas in the analysis drawer
+- **Readable hops** — same-host hops show what actually changed (`http:// → https://`, `/page → /page/`) instead of a duplicated hostname
+- **Search & noise filtering** — substring filter across all chain URLs; tracking pixels, analytics beacons, and media sub-requests hidden by default (incl. RU ad infrastructure: Yandex ads, ad.mail.ru, VK ads)
+- **Export** — copy a clean summary or full analysis report, download the raw chain as JSON, or copy a ready `curl` command that reproduces the chain server-side
+- **Side panel by default** — on Chrome/Edge the toolbar icon opens the side panel (popup remains the Firefox surface); undo-able Clear, keyboard shortcuts (`/`, `?`, `Esc`, Ctrl+click to open a URL), and a built-in help drawer
 - **Dark & light theme** — follows system preference or toggle manually
-- **One-click export** — copy chain summary or full analysis report to clipboard
-- **7 languages** — English, Spanish, German, French, Brazilian Portuguese, Turkish, Russian
+- **7 languages** — English, Spanish, German, French, Brazilian Portuguese, Turkish, Russian (full UI translations)
 - **Fully local** — no accounts, no analytics, no network requests by default, no data leaves your browser
 - **Optional 301.sh news** — opt-in browser notifications for new redirect/DNS/HTTP articles on [301.sh](https://301.sh); off by default, the `notifications` permission is requested only when you enable it
 
@@ -32,9 +35,11 @@ Real-time redirect console for developers — trace server & client redirects, r
 
 ## How it works
 
-Browse normally — Redirect Inspector captures every redirect chain in the background via the webRequest API. Click the toolbar icon to see grouped chains with status codes, hop counts, and timing. Hit the magnifier on any chain to run local analysis: nine heuristics check for loops, ping-pong patterns, mixed redirect types, and more. Copy the full report with one click.
+Browse normally — Redirect Inspector captures every redirect chain in the background via the webRequest API. Click the toolbar icon to open the side panel with grouped chains, status codes, hop counts, and timing. Hit the magnifier on any chain to run local analysis: nine heuristics check for loops, ping-pong patterns, mixed redirect types, and more. Copy the full report, download JSON, or grab a cURL one-liner.
 
-Everything happens locally in the popup or side panel. No data is stored externally, transmitted, or logged.
+To check a URL without visiting it yourself, pull the handle at the bottom of the panel and paste it — the chain appears labeled "Checked by you". A first-run example chain (`www.301.st → 301.st`) is seeded on install so the panel is never empty; it is synthetic, no request is made.
+
+Everything happens locally in the side panel (or the Firefox popup). No data is stored externally, transmitted, or logged.
 
 ## Development
 
@@ -58,7 +63,7 @@ npm run check          # Typecheck + lint + test
 - TypeScript strict mode
 - Vanilla DOM + CSS custom properties (no framework)
 - Chrome MV3 + Firefox MV2 + Edge MV3 builds
-- Vitest — 74 tests across classify, helpers, and session grouping
+- Vitest — 75 tests across classify, helpers, and session grouping
 - Zero runtime dependencies
 
 ## Privacy
@@ -66,6 +71,8 @@ npm run check          # Typecheck + lint + test
 Redirect Inspector makes zero network requests by default. No analytics, no telemetry, no remote code. Redirect data is stored in `browser.storage.local` and never leaves the browser. The persisted preferences are theme, noise-filter, and news toggles.
 
 The only optional network activity is the 301.sh news feed: if (and only if) you enable news notifications, the extension fetches `https://301.sh/posts.json` a few times a day to show a browser notification about new articles. Nothing is ever sent — the request carries no identifiers or browsing data, and disabling the toggle stops it entirely.
+
+The manual "check a URL" feature does not make requests either: it opens the URL as a regular browser navigation in an inactive tab (your cookies apply, the visit lands in history) and closes the tab once the chain is recorded.
 
 ## Related
 
