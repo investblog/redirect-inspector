@@ -49,10 +49,15 @@ export default defineConfig({
       browser_specific_settings: {
         gecko: {
           id: 'redirect-inspector@301.st',
-          strict_min_version: '109.0',
+          // data_collection_permissions is only understood since FF 140 —
+          // a lower min version trips AMO validation warnings
+          strict_min_version: '140.0',
           data_collection_permissions: {
             required: ['none'],
           },
+        },
+        gecko_android: {
+          strict_min_version: '142.0',
         },
       },
     }),
