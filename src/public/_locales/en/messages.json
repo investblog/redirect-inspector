@@ -365,7 +365,7 @@
 		"message": "More control with 301.st"
 	},
 	"promoText": {
-		"message": "301.st, the service behind this extension, manages and monitors redirects on your domains and tracks affiliate sales. The free plan lets you trace your traffic all the way to conversions."
+		"message": "301.st — the service behind this extension — turns redirects into an operations console: edge rules synced to Cloudflare at scale, domain monitoring, geo-routing and A/B traffic streams (TDS). Your infrastructure stays yours, and everything is free during the open beta."
 	},
 	"promoCta": {
 		"message": "Try 301.st for free"

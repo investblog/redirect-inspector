@@ -365,7 +365,7 @@
 		"message": "Más control con 301.st"
 	},
 	"promoText": {
-		"message": "301.st, el servicio detrás de esta extensión, gestiona y monitoriza redirecciones en tus dominios y rastrea ventas de afiliados. El plan gratuito te permite seguir tu tráfico hasta las conversiones."
+		"message": "301.st, el servicio detrás de esta extensión, convierte las redirecciones en una consola de operaciones: reglas edge sincronizadas con Cloudflare a escala, monitoreo de dominios, geo-enrutamiento y streams A/B de tráfico (TDS). Tu infraestructura sigue siendo tuya, y todo es gratis durante la beta abierta."
 	},
 	"promoCta": {
 		"message": "Prueba 301.st gratis"

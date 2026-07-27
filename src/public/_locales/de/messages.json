@@ -365,7 +365,7 @@
 		"message": "Mehr Kontrolle mit 301.st"
 	},
 	"promoText": {
-		"message": "301.st, der Dienst hinter dieser Erweiterung, verwaltet und überwacht Redirects auf Ihren Domains und trackt Affiliate-Verkäufe. Mit dem kostenlosen Plan verfolgen Sie Ihren Traffic bis zur Conversion."
+		"message": "301.st, der Dienst hinter dieser Erweiterung, macht Redirects zur Operations-Konsole: Edge-Regeln mit Cloudflare-Sync im großen Maßstab, Domain-Monitoring, Geo-Routing und A/B-Traffic-Streams (TDS). Ihre Infrastruktur bleibt Ihre — und in der offenen Beta ist alles kostenlos."
 	},
 	"promoCta": {
 		"message": "301.st kostenlos testen"
