@@ -34,6 +34,8 @@ const REDIRECT_LOG_KEY = 'redirectLog';
 
 let allRedirectRecords: RedirectRecord[] = [];
 let storageListenerRegistered = false;
+let searchQuery = '';
+let lastClearedRecords: RedirectRecord[] | null = null;
 
 // ---- DOM refs (set by buildUI) ----
 
@@ -47,6 +49,8 @@ let themeToggleBtn: HTMLButtonElement | null = null;
 let popupBody: HTMLElement | null = null;
 let popupControls: HTMLElement | null = null;
 let countEl: HTMLElement | null = null;
+let searchInput: HTMLInputElement | null = null;
+let emptyPanelEl: HTMLElement | null = null;
 
 const template = document.getElementById('redirect-item-template') as HTMLTemplateElement;
 
@@ -160,6 +164,20 @@ function buildUI(): void {
   noiseSummaryEl.hidden = true;
   controls.appendChild(noiseSummaryEl);
 
+  searchInput = document.createElement('input');
+  searchInput.id = 'chain-search';
+  searchInput.className = 'controls__search';
+  searchInput.type = 'search';
+  searchInput.placeholder = t('searchPlaceholder');
+  searchInput.setAttribute('aria-label', t('searchPlaceholder'));
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput?.value.trim().toLowerCase() ?? '';
+    const context = applyFilters(allRedirectRecords);
+    updateStatusForRecords(context);
+    updatePopupHeight();
+  });
+  controls.appendChild(searchInput);
+
   popupControls.appendChild(controls);
   app.appendChild(popupControls);
 
@@ -177,6 +195,9 @@ function buildUI(): void {
   redirectListEl.id = 'redirect-list';
   redirectListEl.className = 'redirect-list';
   popupBody.appendChild(redirectListEl);
+
+  emptyPanelEl = buildEmptyPanel();
+  popupBody.appendChild(emptyPanelEl);
 
   app.appendChild(popupBody);
 
@@ -236,11 +257,176 @@ function buildUI(): void {
   tgLink.appendChild(svgIcon('telegram'));
   footer.appendChild(tgLink);
 
+  const helpBtn = document.createElement('button');
+  helpBtn.className = 'popup__social-link popup__help-btn';
+  helpBtn.type = 'button';
+  helpBtn.title = t('helpTitle');
+  helpBtn.setAttribute('aria-label', t('helpTitle'));
+  helpBtn.appendChild(svgIcon('help-circle'));
+  helpBtn.addEventListener('click', openHelpDrawer);
+  footer.appendChild(helpBtn);
+
   countEl = document.createElement('span');
   countEl.className = 'popup__count';
   footer.appendChild(countEl);
 
   app.appendChild(footer);
+}
+
+// ---- Empty state: URL check form + inline tips ----
+
+function buildEmptyPanel(): HTMLElement {
+  const panel = document.createElement('section');
+  panel.className = 'empty-panel';
+  panel.hidden = true;
+
+  const form = document.createElement('form');
+  form.className = 'empty-panel__form';
+
+  const input = document.createElement('input');
+  input.className = 'empty-panel__input';
+  input.type = 'text';
+  input.placeholder = t('checkUrlPlaceholder');
+  input.setAttribute('aria-label', t('checkUrlPlaceholder'));
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  form.appendChild(input);
+
+  const submit = document.createElement('button');
+  submit.className = 'btn btn--primary empty-panel__submit';
+  submit.type = 'submit';
+  submit.textContent = t('checkUrlButton');
+  form.appendChild(submit);
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const url = input.value.trim();
+      if (!url) return;
+      submit.disabled = true;
+      const response = await sendMessageSafe<{ success: boolean; error?: string }>({
+        type: 'redirect-inspector:check-url',
+        payload: { url },
+      });
+      submit.disabled = false;
+      if (response?.success) {
+        input.value = '';
+        // The chain arrives via the storage listener once the probe completes.
+      } else {
+        showStatus(t('checkUrlFailed'), 'error');
+      }
+    })();
+  });
+  panel.appendChild(form);
+
+  const tips = document.createElement('ul');
+  tips.className = 'empty-panel__tips';
+  for (const key of ['tip1', 'tip2', 'tip3']) {
+    const li = document.createElement('li');
+    li.textContent = t(key);
+    tips.appendChild(li);
+  }
+  panel.appendChild(tips);
+
+  return panel;
+}
+
+// ---- Help drawer (footer "?" icon and the Shift+/ shortcut) ----
+
+function openHelpDrawer(): void {
+  if (document.querySelector('.drawer')) return;
+
+  const restoreFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const drawer = document.createElement('aside');
+  drawer.className = 'drawer';
+
+  const close = (): void => {
+    document.removeEventListener('keydown', onKeydown);
+    drawer.remove();
+    restoreFocusTo?.focus();
+    updatePopupHeight();
+  };
+  const onKeydown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      close();
+    }
+  };
+  document.addEventListener('keydown', onKeydown);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'drawer__overlay';
+  overlay.addEventListener('click', close);
+  drawer.appendChild(overlay);
+
+  const panel = document.createElement('div');
+  panel.className = 'drawer__panel';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', t('helpTitle'));
+  panel.tabIndex = -1;
+
+  const header = document.createElement('div');
+  header.className = 'drawer__header';
+  const title = document.createElement('h2');
+  title.className = 'drawer__title';
+  const titleIcon = svgIcon('help-circle');
+  titleIcon.classList.add('drawer__title-icon');
+  title.appendChild(titleIcon);
+  title.appendChild(document.createTextNode(` ${t('helpTitle')}`));
+  header.appendChild(title);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'drawer__close';
+  closeBtn.type = 'button';
+  closeBtn.title = t('closeButton');
+  closeBtn.setAttribute('aria-label', t('closeButton'));
+  closeBtn.appendChild(svgIcon('close'));
+  closeBtn.addEventListener('click', close);
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'drawer__body';
+
+  const shortcuts: Array<[string, string]> = [
+    ['/', t('shortcutFilter')],
+    ['?', t('shortcutHelp')],
+    ['Esc', t('shortcutClose')],
+  ];
+  const list = document.createElement('dl');
+  list.className = 'help-shortcuts';
+  for (const [keyLabel, description] of shortcuts) {
+    const dt = document.createElement('dt');
+    const kbd = document.createElement('kbd');
+    kbd.textContent = keyLabel;
+    dt.appendChild(kbd);
+    const dd = document.createElement('dd');
+    dd.textContent = description;
+    list.appendChild(dt);
+    list.appendChild(dd);
+  }
+  body.appendChild(list);
+
+  const tipsTitle = document.createElement('h3');
+  tipsTitle.className = 'help-tips__title';
+  tipsTitle.textContent = t('tipsTitle');
+  body.appendChild(tipsTitle);
+
+  const tips = document.createElement('ul');
+  tips.className = 'help-tips';
+  for (const key of ['tip1', 'tip2', 'tip3', 'tip4']) {
+    const li = document.createElement('li');
+    li.textContent = t(key);
+    tips.appendChild(li);
+  }
+  body.appendChild(tips);
+
+  panel.appendChild(body);
+  drawer.appendChild(panel);
+  document.body.appendChild(drawer);
+  queueMicrotask(() => panel.focus());
+  updatePopupHeight();
 }
 
 // ---- Popup height ----
@@ -364,6 +550,20 @@ function showStatus(message: string, type: string = 'info'): void {
   statusEl.textContent = message;
   statusEl.dataset.type = type;
   statusEl.hidden = !message;
+}
+
+/** Status message with an inline action button (e.g. Undo after Clear). */
+function showStatusWithAction(message: string, type: string, actionLabel: string, onAction: () => void): void {
+  statusEl.textContent = '';
+  statusEl.appendChild(document.createTextNode(message));
+  const action = document.createElement('button');
+  action.className = 'status__action';
+  action.type = 'button';
+  action.textContent = actionLabel;
+  action.addEventListener('click', onAction);
+  statusEl.appendChild(action);
+  statusEl.dataset.type = type;
+  statusEl.hidden = false;
 }
 
 function formatUrl(url: string | undefined): string {
@@ -546,8 +746,19 @@ interface FilterContext {
   showingNoise: boolean;
 }
 
+function recordMatchesQuery(record: RedirectRecord, query: string): boolean {
+  if (!query) return true;
+  const haystack: Array<string | undefined> = [record.initialUrl, record.finalUrl];
+  for (const event of record.events ?? []) {
+    haystack.push(event.from, event.to);
+  }
+  return haystack.some((value) => value?.toLowerCase().includes(query));
+}
+
 function applyFilters(records: RedirectRecord[]): FilterContext {
-  const safeRecords = Array.isArray(records) ? records : [];
+  const safeRecords = (Array.isArray(records) ? records : []).filter((record) =>
+    recordMatchesQuery(record, searchQuery),
+  );
   const showingNoise = Boolean(showNoiseToggle?.checked);
   const hiddenRecords = showingNoise
     ? []
@@ -568,8 +779,14 @@ function applyFilters(records: RedirectRecord[]): FilterContext {
 }
 
 function updateStatusForRecords({ total, visible, hidden, showingNoise }: FilterContext): void {
+  // Rich empty panel (URL check + tips) only when the log is truly empty,
+  // not when a search or the noise filter hid everything.
+  if (emptyPanelEl) {
+    emptyPanelEl.hidden = !(total === 0 && !searchQuery);
+  }
+
   if (total === 0) {
-    showStatus(t('emptyState'), 'info');
+    showStatus(searchQuery ? '' : t('emptyState'), 'info');
     return;
   }
 
@@ -878,6 +1095,17 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   const titleUrl = pickTitleUrl(record, events);
   titleEl.textContent = formatUrl(titleUrl);
   titleEl.title = titleUrl;
+  // Power-user affordance: ctrl/cmd- or middle-click opens the final URL.
+  // Plain left-click stays inert to avoid accidental navigation.
+  const openTitleUrl = (event: MouseEvent): void => {
+    const middle = event.type === 'auxclick' && event.button === 1;
+    if (middle || event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      void browser.tabs.create({ url: titleUrl });
+    }
+  };
+  titleEl.addEventListener('click', openTitleUrl);
+  titleEl.addEventListener('auxclick', openTitleUrl);
 
   // Timestamp becomes a "legend" pinned on the card's top border (costs no height)
   const timestampEl = clone.querySelector('.redirect-item__timestamp') as HTMLElement;
@@ -908,6 +1136,13 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
     demoEl.className = 'redirect-item__badge';
     demoEl.textContent = t('demoChain');
     metaEl.appendChild(demoEl);
+  }
+
+  if (record.manual) {
+    const manualEl = document.createElement('span');
+    manualEl.className = 'redirect-item__badge';
+    manualEl.textContent = t('checkedByYou');
+    metaEl.appendChild(manualEl);
   }
 
   if (record.classification === 'likely-tracking') {
@@ -1162,7 +1397,41 @@ async function fetchRedirectLog(): Promise<void> {
   await loadRedirectLogFromStorage();
 }
 
+function showClearedWithUndo(): void {
+  showStatusWithAction(t('clearedStatus'), 'success', t('undoButton'), () => {
+    void undoClear();
+  });
+  // The offer expires quietly; don't clobber a newer message.
+  setTimeout(() => {
+    lastClearedRecords = null;
+    if (statusEl.querySelector('.status__action')) {
+      showStatus('');
+    }
+  }, 10_000);
+}
+
+async function undoClear(): Promise<void> {
+  const records = lastClearedRecords;
+  lastClearedRecords = null;
+  if (!records || records.length === 0) {
+    showStatus('');
+    return;
+  }
+  try {
+    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: records });
+    allRedirectRecords = records;
+    applyFilters(allRedirectRecords);
+    updateFooterCount();
+    updatePopupHeight();
+    showStatus('');
+  } catch (error) {
+    console.error('Undo clear failed', error);
+    showStatus(t('loadFailed'), 'error');
+  }
+}
+
 async function clearRedirectLog(): Promise<void> {
+  lastClearedRecords = allRedirectRecords.length > 0 ? allRedirectRecords.slice() : null;
   showStatus(t('clearingStatus'), 'info');
 
   const response = await sendMessageSafe<{ success: boolean }>({
@@ -1174,7 +1443,7 @@ async function clearRedirectLog(): Promise<void> {
     applyFilters(allRedirectRecords);
     updateFooterCount();
     updatePopupHeight();
-    showStatus(t('clearedStatus'), 'success');
+    showClearedWithUndo();
     return;
   }
 
@@ -1184,7 +1453,7 @@ async function clearRedirectLog(): Promise<void> {
     applyFilters(allRedirectRecords);
     updateFooterCount();
     updatePopupHeight();
-    showStatus(t('clearedStatus'), 'success');
+    showClearedWithUndo();
   } catch (err) {
     const error = err as Error;
     console.error('Local clear failed:', error);
@@ -1234,6 +1503,20 @@ document.addEventListener('DOMContentLoaded', () => {
   updateThemeIcon();
   initHeaderScroll();
   subscribeToLogUpdates();
+
+  // Global shortcuts: "/" focuses the filter, "?" opens help (Esc lives in the drawers)
+  document.addEventListener('keydown', (event) => {
+    const target = event.target as HTMLElement | null;
+    const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+    if (typing) return;
+    if (event.key === '/') {
+      event.preventDefault();
+      searchInput?.focus();
+    } else if (event.key === '?') {
+      event.preventDefault();
+      openHelpDrawer();
+    }
+  });
 
   (async () => {
     await loadNoisePreference();

@@ -312,5 +312,42 @@
 		"placeholders": {
 			"count": { "content": "$1" }
 		}
+	},
+
+	"searchPlaceholder": {
+		"message": "URL'ye göre filtrele…"
+	},
+	"undoButton": {
+		"message": "Geri al"
+	},
+	"checkUrlPlaceholder": {
+		"message": "Yönlendirmelerini kontrol etmek için bir URL yapıştırın"
+	},
+	"checkUrlButton": {
+		"message": "Kontrol et"
+	},
+	"checkUrlFailed": {
+		"message": "URL açılamadı."
+	},
+	"checkedByYou": {
+		"message": "Sizin kontrolünüz"
+	},
+	"downloadJson": {
+		"message": "JSON indir"
+	},
+	"copyCurl": {
+		"message": "cURL olarak kopyala"
+	},
+	"helpTitle": {
+		"message": "Yardım ve kısayollar"
+	},
+	"shortcutFilter": {
+		"message": "URL filtresine odaklan"
+	},
+	"shortcutHelp": {
+		"message": "Bu yardımı aç"
+	},
+	"shortcutClose": {
+		"message": "Pencereleri kapat"
 	}
 }

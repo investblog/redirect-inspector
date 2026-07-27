@@ -40,3 +40,5 @@ export {
 export * from './helpers';
 
 export { checkNews, disableNewsAlarm, enableNewsAlarm, setupNews } from './news';
+
+export { closeProbeTab, probeTabIds, startUrlProbe } from './probe';

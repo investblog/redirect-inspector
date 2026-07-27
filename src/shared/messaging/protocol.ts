@@ -23,6 +23,13 @@ export interface MessageMap {
       error?: string;
     };
   };
+  'redirect-inspector:check-url': {
+    request: { url: string };
+    response: {
+      success: boolean;
+      error?: string;
+    };
+  };
 }
 
 export type MessageType = keyof MessageMap;

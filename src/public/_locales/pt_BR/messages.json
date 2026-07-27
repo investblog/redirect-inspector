@@ -312,5 +312,42 @@
 		"placeholders": {
 			"count": { "content": "$1" }
 		}
+	},
+
+	"searchPlaceholder": {
+		"message": "Filtrar por URL…"
+	},
+	"undoButton": {
+		"message": "Desfazer"
+	},
+	"checkUrlPlaceholder": {
+		"message": "Cole uma URL para verificar seus redirecionamentos"
+	},
+	"checkUrlButton": {
+		"message": "Verificar"
+	},
+	"checkUrlFailed": {
+		"message": "Não foi possível abrir a URL."
+	},
+	"checkedByYou": {
+		"message": "Verificado por você"
+	},
+	"downloadJson": {
+		"message": "Baixar JSON"
+	},
+	"copyCurl": {
+		"message": "Copiar como cURL"
+	},
+	"helpTitle": {
+		"message": "Ajuda e atalhos"
+	},
+	"shortcutFilter": {
+		"message": "Focar o filtro de URL"
+	},
+	"shortcutHelp": {
+		"message": "Abrir esta ajuda"
+	},
+	"shortcutClose": {
+		"message": "Fechar diálogos"
 	}
 }

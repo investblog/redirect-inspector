@@ -30,7 +30,10 @@ export type IconName =
   | 'github'
   | 'telegram'
   | 'bell'
-  | 'bell-off';
+  | 'bell-off'
+  | 'help-circle'
+  | 'download'
+  | 'console';
 
 /**
  * Create an SVG element that references a symbol from the inline sprite.

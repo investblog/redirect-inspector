@@ -33,6 +33,8 @@ export interface RedirectRecord {
   awaitingClientRedirectDeadline?: number;
   /** Synthetic first-run example chain, labeled in the UI; removed by Clear like any record. */
   demo?: boolean;
+  /** Captured via the manual "check a URL" probe (background tab navigation). */
+  manual?: boolean;
 }
 
 export type Classification = 'normal' | 'likely-tracking' | 'likely-media';

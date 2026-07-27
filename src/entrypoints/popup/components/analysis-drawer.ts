@@ -121,6 +121,49 @@ export function createAnalysisDrawer(record: RedirectRecord, result: AnalysisRes
   });
   headerActions.appendChild(copyBtn);
 
+  // Copy-as-cURL: reproduces the chain server-side without exposing headers
+  const curlUrl = record.initialUrl || record.events?.[0]?.from;
+  if (curlUrl) {
+    const curlBtn = el('button', 'drawer__close drawer__copy');
+    curlBtn.type = 'button';
+    curlBtn.title = t('copyCurl');
+    curlBtn.setAttribute('aria-label', t('copyCurl'));
+    curlBtn.appendChild(svgIcon('console'));
+    curlBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(`curl -sIL '${curlUrl.replace(/'/g, "'\\''")}'`);
+        curlBtn.title = t('copied');
+        curlBtn.classList.add('drawer__copy--success');
+        curlBtn.disabled = true;
+        setTimeout(() => {
+          curlBtn.disabled = false;
+          curlBtn.title = t('copyCurl');
+          curlBtn.classList.remove('drawer__copy--success');
+        }, 1600);
+      } catch (err) {
+        console.error('Failed to copy curl command', err);
+      }
+    });
+    headerActions.appendChild(curlBtn);
+  }
+
+  // Lossless JSON export of the stored record — no network, plain Blob download
+  const jsonBtn = el('button', 'drawer__close drawer__copy');
+  jsonBtn.type = 'button';
+  jsonBtn.title = t('downloadJson');
+  jsonBtn.setAttribute('aria-label', t('downloadJson'));
+  jsonBtn.appendChild(svgIcon('download'));
+  jsonBtn.addEventListener('click', () => {
+    const blob = new Blob([`${JSON.stringify(record, null, 2)}\n`], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `redirect-chain-${getHost(record.finalUrl || record.initialUrl) || 'export'}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5_000);
+  });
+  headerActions.appendChild(jsonBtn);
+
   const closeBtn = el('button', 'drawer__close');
   closeBtn.type = 'button';
   closeBtn.title = t('closeButton');

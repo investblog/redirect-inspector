@@ -312,5 +312,42 @@
 		"placeholders": {
 			"count": { "content": "$1" }
 		}
+	},
+
+	"searchPlaceholder": {
+		"message": "Фильтр по URL…"
+	},
+	"undoButton": {
+		"message": "Отменить"
+	},
+	"checkUrlPlaceholder": {
+		"message": "Вставьте URL, чтобы проверить его редиректы"
+	},
+	"checkUrlButton": {
+		"message": "Проверить"
+	},
+	"checkUrlFailed": {
+		"message": "Не удалось открыть URL."
+	},
+	"checkedByYou": {
+		"message": "Ваша проверка"
+	},
+	"downloadJson": {
+		"message": "Скачать JSON"
+	},
+	"copyCurl": {
+		"message": "Скопировать как cURL"
+	},
+	"helpTitle": {
+		"message": "Справка и шорткаты"
+	},
+	"shortcutFilter": {
+		"message": "Фокус на фильтр URL"
+	},
+	"shortcutHelp": {
+		"message": "Открыть эту справку"
+	},
+	"shortcutClose": {
+		"message": "Закрыть диалоги"
 	}
 }

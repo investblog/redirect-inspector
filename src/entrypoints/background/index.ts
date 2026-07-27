@@ -14,6 +14,7 @@ import {
   seedDemoRecordIfEmpty,
   serializeChainPreview,
   setupNews,
+  startUrlProbe,
 } from '../../background';
 import { REDIRECT_LOG_KEY, WEB_REQUEST_EXTRA_INFO_SPEC, WEB_REQUEST_FILTER } from '../../background/helpers';
 import { setNewsEnabled } from '../../shared/news';
@@ -127,6 +128,14 @@ export default defineBackground(() => {
           console.error('Failed to toggle news notifications', error);
           sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' });
         });
+
+      return true;
+    }
+
+    if (type === 'redirect-inspector:check-url') {
+      startUrlProbe(String(message?.payload?.url ?? ''))
+        .then((result) => sendResponse(result))
+        .catch((error) => sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' }));
 
       return true;
     }

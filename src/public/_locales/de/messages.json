@@ -312,5 +312,42 @@
 		"placeholders": {
 			"count": { "content": "$1" }
 		}
+	},
+
+	"searchPlaceholder": {
+		"message": "Nach URL filtern…"
+	},
+	"undoButton": {
+		"message": "Rückgängig"
+	},
+	"checkUrlPlaceholder": {
+		"message": "URL einfügen, um ihre Redirects zu prüfen"
+	},
+	"checkUrlButton": {
+		"message": "Prüfen"
+	},
+	"checkUrlFailed": {
+		"message": "URL konnte nicht geöffnet werden."
+	},
+	"checkedByYou": {
+		"message": "Von Ihnen geprüft"
+	},
+	"downloadJson": {
+		"message": "JSON herunterladen"
+	},
+	"copyCurl": {
+		"message": "Als cURL kopieren"
+	},
+	"helpTitle": {
+		"message": "Hilfe & Tastenkürzel"
+	},
+	"shortcutFilter": {
+		"message": "URL-Filter fokussieren"
+	},
+	"shortcutHelp": {
+		"message": "Diese Hilfe öffnen"
+	},
+	"shortcutClose": {
+		"message": "Dialoge schließen"
 	}
 }

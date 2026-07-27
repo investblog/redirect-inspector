@@ -30,6 +30,7 @@ import {
   REDIRECT_LOG_KEY,
   sameHost,
 } from './helpers';
+import { closeProbeTab, probeTabIds } from './probe';
 
 // ---- State Maps ----
 
@@ -389,6 +390,12 @@ async function finalizeChainRecord(chainId: string): Promise<void> {
   }
 
   chain.pendingFinalDetails = null;
+
+  // Manual "check a URL" probe: flag the record and close its helper tab
+  if (typeof chain.tabId === 'number' && probeTabIds.has(chain.tabId)) {
+    record.manual = true;
+    closeProbeTab(chain.tabId);
+  }
 
   const allEventsNoisy = preparedEvents.allEventsNoisy;
 
