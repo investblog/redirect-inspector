@@ -446,6 +446,7 @@ function openHelpDrawer(): void {
     ['/', t('shortcutFilter')],
     ['?', t('shortcutHelp')],
     ['Esc', t('shortcutClose')],
+    ['Ctrl+Click', t('shortcutOpenUrl')],
   ];
   const list = document.createElement('dl');
   list.className = 'help-shortcuts';
@@ -468,7 +469,7 @@ function openHelpDrawer(): void {
 
   const tips = document.createElement('ul');
   tips.className = 'help-tips';
-  for (const key of ['tip1', 'tip2', 'tip3', 'tip4', 'tipCheckUrl']) {
+  for (const key of ['tip1', 'tip2', 'tip3', 'tip4', 'tipCheckUrl', 'tipExports', 'tipUndo']) {
     const li = document.createElement('li');
     li.textContent = t(key);
     tips.appendChild(li);

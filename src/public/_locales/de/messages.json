@@ -369,5 +369,15 @@
 	},
 	"promoCta": {
 		"message": "301.st kostenlos testen"
+	},
+
+	"shortcutOpenUrl": {
+		"message": "Endgültige URL der Kette öffnen (auch per Mittelklick)"
+	},
+	"tipExports": {
+		"message": "Der Analyse-Dialog lädt JSON herunter und kopiert einen fertigen cURL-Befehl"
+	},
+	"tipUndo": {
+		"message": "Leeren lässt sich 10 Sekunden lang rückgängig machen"
 	}
 }

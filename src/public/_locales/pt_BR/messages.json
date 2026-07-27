@@ -369,5 +369,15 @@
 	},
 	"promoCta": {
 		"message": "Experimente o 301.st grátis"
+	},
+
+	"shortcutOpenUrl": {
+		"message": "Abrir a URL final da cadeia (clique do meio também funciona)"
+	},
+	"tipExports": {
+		"message": "O painel de análise baixa JSON e copia um comando cURL pronto"
+	},
+	"tipUndo": {
+		"message": "Limpar pode ser desfeito em até 10 segundos"
 	}
 }

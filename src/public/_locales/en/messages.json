@@ -369,5 +369,15 @@
 	},
 	"promoCta": {
 		"message": "Try 301.st for free"
+	},
+
+	"shortcutOpenUrl": {
+		"message": "Open the chain's final URL (middle-click works too)"
+	},
+	"tipExports": {
+		"message": "The analysis drawer downloads JSON and copies a ready cURL command"
+	},
+	"tipUndo": {
+		"message": "Clear can be undone within 10 seconds"
 	}
 }

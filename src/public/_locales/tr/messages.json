@@ -369,5 +369,15 @@
 	},
 	"promoCta": {
 		"message": "301.st'yi ücretsiz deneyin"
+	},
+
+	"shortcutOpenUrl": {
+		"message": "Zincirin son URL'sini aç (orta tıklama da çalışır)"
+	},
+	"tipExports": {
+		"message": "Analiz paneli JSON indirir ve hazır bir cURL komutu kopyalar"
+	},
+	"tipUndo": {
+		"message": "Temizleme 10 saniye içinde geri alınabilir"
 	}
 }
