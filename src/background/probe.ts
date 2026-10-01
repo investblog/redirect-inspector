@@ -10,7 +10,8 @@
 
 import { browser } from 'wxt/browser';
 import type { RedirectRecord } from '../shared/types/redirect';
-import { formatTimestamp, MAX_RECORDS, REDIRECT_LOG_KEY } from './helpers';
+import { formatTimestamp } from './helpers';
+import { appendRedirectRecord } from './log';
 
 /** tabId -> originally requested URL. */
 export const probeTabs = new Map<number, string>();
@@ -36,7 +37,13 @@ function persistProbeTabs(): void {
     .catch(() => {});
 }
 
-export async function startUrlProbe(rawUrl: string): Promise<{ success: boolean; error?: string }> {
+/** Force-finalizes the tab's in-flight chains with an error; returns how many had hops. */
+type FinalizeTabChains = (tabId: number, errorMessage: string) => number;
+
+export async function startUrlProbe(
+  rawUrl: string,
+  finalizeTabChains: FinalizeTabChains,
+): Promise<{ success: boolean; error?: string }> {
   let url: string;
   try {
     const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(rawUrl.trim()) ? rawUrl.trim() : `https://${rawUrl.trim()}`;
@@ -55,12 +62,43 @@ export async function startUrlProbe(rawUrl: string): Promise<{ success: boolean;
       const tabId = tab.id;
       probeTabs.set(tabId, url);
       persistProbeTabs();
-      setTimeout(() => closeProbeTab(tabId), PROBE_TAB_TIMEOUT_MS);
+      setTimeout(() => handleProbeTimeout(tabId, finalizeTabChains), PROBE_TAB_TIMEOUT_MS);
     }
     return { success: true };
   } catch (error) {
     return { success: false, error: (error as Error)?.message || 'Failed to open tab' };
   }
+}
+
+/**
+ * The probe did not finish in time (the page hangs, or a chain stalls mid-way).
+ * Record what was captured, flagged with a timeout error, instead of closing the
+ * tab silently and leaving a pending chain behind.
+ */
+function handleProbeTimeout(tabId: number, finalizeTabChains: FinalizeTabChains): void {
+  const initialUrl = probeTabs.get(tabId);
+  if (initialUrl === undefined) {
+    return;
+  }
+
+  const error = `Timed out after ${PROBE_TAB_TIMEOUT_MS / 1000}s`;
+  // Runs while the tab is still a probe, so the main chain gets the manual flag.
+  if (finalizeTabChains(tabId, error) === 0) {
+    // No redirect happened and the page never finished loading.
+    void appendRedirectRecord({
+      id: crypto.randomUUID(),
+      tabId,
+      manual: true,
+      initiatedAt: formatTimestamp(Date.now() - PROBE_TAB_TIMEOUT_MS),
+      completedAt: formatTimestamp(),
+      initialUrl,
+      finalUrl: initialUrl,
+      error,
+      events: [],
+      classification: 'normal',
+    });
+  }
+  closeProbeTab(tabId);
 }
 
 /** Idempotent: closes the tab only if it is still a tracked probe. */
@@ -107,16 +145,7 @@ export function handleProbeDirectCompletion(
       events: [],
       classification: 'normal',
     };
-    void (async () => {
-      try {
-        const { [REDIRECT_LOG_KEY]: existing = [] } = await browser.storage.local.get(REDIRECT_LOG_KEY);
-        const updated = [record, ...(existing as RedirectRecord[])].slice(0, MAX_RECORDS);
-        await browser.storage.local.set({ [REDIRECT_LOG_KEY]: updated });
-      } catch (error) {
-        console.warn('Failed to persist manual check record', error);
-      }
-      closeProbeTab(tabId);
-    })();
+    void appendRedirectRecord(record).then(() => closeProbeTab(tabId));
   }, PROBE_NO_REDIRECT_SETTLE_MS);
 }
 

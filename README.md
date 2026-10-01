@@ -9,7 +9,7 @@ Real-time redirect console for developers — trace server & client redirects, r
 ## Features
 
 - **Real-time capture** — every server redirect (301, 302, 307, 308), HSTS upgrade, and client-side navigation (JS, meta-refresh) recorded as it happens
-- **Check any URL** — paste a URL into the bottom dock; it opens in an invisible background tab, the chain is captured through the normal pipeline, and the tab closes itself
+- **Check any URL** — paste a URL into the bottom dock; it opens in an invisible background tab, the chain is captured through the normal pipeline, and the tab closes itself; a page that never finishes loading ends after 20s with a "Timed out" result that keeps the hops captured so far
 - **Session grouping** — chains from the same browsing session grouped by tab, time, and domain affinity
 - **9-heuristic analysis** — loops, ping-pong, long chains, mixed types, auth bounces, locale/consent, tracking noise, CDN detection, final outcome
 - **Timing** — total chain duration on every card, per-hop deltas in the analysis drawer

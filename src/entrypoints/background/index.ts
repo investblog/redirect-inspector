@@ -6,6 +6,7 @@ import {
   clearAllBadges,
   disableNewsAlarm,
   enableNewsAlarm,
+  forceFinalizeTabChains,
   handleBeforeRedirect,
   handleBeforeRequest,
   handleRequestCompleted,
@@ -134,7 +135,7 @@ export default defineBackground(() => {
     }
 
     if (type === 'redirect-inspector:check-url') {
-      startUrlProbe(String(message?.payload?.url ?? ''))
+      startUrlProbe(String(message?.payload?.url ?? ''), forceFinalizeTabChains)
         .then((result) => sendResponse(result))
         .catch((error) => sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' }));
 

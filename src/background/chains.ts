@@ -26,10 +26,10 @@ import {
   formatTimestamp,
   getHeaderValue,
   isNoisyUrl,
-  MAX_RECORDS,
   REDIRECT_LOG_KEY,
   sameHost,
 } from './helpers';
+import { appendRedirectRecord } from './log';
 import { closeProbeTab, handleProbeDirectCompletion, probeTabs } from './probe';
 
 // ---- State Maps ----
@@ -61,16 +61,6 @@ function appendEventToChain(chain: Chain, event: RedirectEvent): void {
 }
 
 // ---- Storage ----
-
-async function appendRedirectRecord(record: RedirectRecord): Promise<void> {
-  try {
-    const { [REDIRECT_LOG_KEY]: existing = [] } = await browser.storage.local.get(REDIRECT_LOG_KEY);
-    const updated = [record, ...(existing as RedirectRecord[])].slice(0, MAX_RECORDS);
-    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: updated });
-  } catch (error) {
-    console.error('Failed to append redirect record', error);
-  }
-}
 
 /**
  * First-run example: a real-world 301 (www.301.st -> 301.st) so the panel is
@@ -247,8 +237,67 @@ function startCleanupTimer(chain: Chain): void {
   }
 
   chain.cleanupTimer = setTimeout(() => {
-    cleanupChain(chain);
+    forceFinalizeChain(chain, 'Timed out waiting for the chain to complete');
   }, ACTIVE_CHAIN_TIMEOUT_MS);
+}
+
+/**
+ * Finalize a chain right now, whatever state it is in: a pending client-redirect
+ * wait is cut short, and a chain whose last request never completed gets a
+ * synthesized completion carrying `errorMessage`. Used for timeouts and closed
+ * tabs — previously such chains were dropped (or lingered as pending) with no record.
+ */
+export function forceFinalizeChain(chain: Chain, errorMessage: string): void {
+  if (!chain || !chainsById.has(chain.id)) {
+    return;
+  }
+
+  if (chain.events.length === 0) {
+    cleanupChain(chain);
+    return;
+  }
+
+  if (chain.awaitingClientRedirectTimer) {
+    clearTimeout(chain.awaitingClientRedirectTimer);
+    chain.awaitingClientRedirectTimer = null;
+  }
+  chain.awaitingClientRedirect = false;
+  stopAwaitingClientRedirectCountdown(chain);
+
+  if (!chain.pendingFinalDetails) {
+    const lastEvent = chain.events.at(-1);
+    const isNavigation = chain.events.some((e) => e.type === 'main_frame' || e.type === 'client-redirect');
+    chain.pendingFinalDetails = {
+      details: {
+        requestId: chain.id,
+        tabId: chain.tabId,
+        url: lastEvent?.to || lastEvent?.from,
+        type: isNavigation ? 'main_frame' : lastEvent?.type,
+        timeStamp: Date.now(),
+        responseHeaders: [],
+      },
+      errorMessage,
+    };
+  }
+
+  finalizeChainRecord(chain.id).catch((error) => {
+    console.error('Failed to persist redirect chain', error);
+  });
+}
+
+/** Force-finalize every in-flight chain of a tab. Returns how many had events. */
+export function forceFinalizeTabChains(tabId: number, errorMessage: string): number {
+  let finalized = 0;
+  for (const chain of Array.from(chainsById.values())) {
+    if (chain.tabId !== tabId) {
+      continue;
+    }
+    if (chain.events.length > 0) {
+      finalized++;
+    }
+    forceFinalizeChain(chain, errorMessage);
+  }
+  return finalized;
 }
 
 export function cleanupChain(chain: Chain): void {
@@ -401,14 +450,16 @@ async function finalizeChainRecord(chainId: string): Promise<void> {
 
   const allEventsNoisy = preparedEvents.allEventsNoisy;
 
+  // Drop the chain from state before the async write, so a concurrent
+  // force-finalize (tab close racing a probe timeout) cannot record it twice.
+  cleanupChain(chain);
+
   // Manually checked chains are always persisted — a user probing a tracker
   // URL expects a result even when every hop is classified as noise.
   if (!allEventsNoisy || record.manual) {
     await appendRedirectRecord(record);
     updateBadgeForRecord(record);
   }
-
-  cleanupChain(chain);
 }
 
 export function serializeChainPreview(chain: Chain): RedirectRecord | null {
@@ -770,17 +821,11 @@ export function cleanupTabState(tabId: number): void {
   pendingClientRedirects.delete(tabId);
   setBadgeForTab(tabId, 0);
 
-  const chainId = tabChains.get(tabId);
-  if (!chainId) {
-    return;
-  }
-
-  const chain = chainsById.get(chainId);
-  if (chain) {
-    cleanupChain(chain);
-  } else {
-    tabChains.delete(tabId);
-  }
+  // A tab can own several chains (tabChains only tracks the latest one), so
+  // sweep them all. Completed-but-awaiting chains are recorded as usual;
+  // unfinished ones get an explicit error instead of vanishing.
+  forceFinalizeTabChains(tabId, 'Tab closed before the chain completed');
+  tabChains.delete(tabId);
 }
 
 export function handleWebNavigationCommitted(

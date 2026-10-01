@@ -13,6 +13,8 @@ export {
   cleanupTabState,
   createChain,
   finalizeChain,
+  forceFinalizeChain,
+  forceFinalizeTabChains,
   getChainByRequestId,
   handleBeforeRedirect,
   handleBeforeRequest,
