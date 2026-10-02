@@ -10,6 +10,11 @@ user reports.
    inactive probe tabs with a concurrency cap (~3); results land in the log as
    `manual` chains; batch export. Closes the competitor's only real advantage;
    key scenario: site-migration audits. Builds directly on `src/background/probe.ts`.
+   Since 2.3.1 the groundwork is there: every probe ends in a record (20s timeout
+   finalizes stalled chains), and log writes are serialized (`background/log.ts`),
+   so parallel probes no longer lose records. A local harness that loads the
+   built extension into Chromium and probes redirect/hang endpoints proved both;
+   rebuild it for the bulk-check tests (it was a scratch script, not committed).
 2. **CSV export** (S) — add to the analysis-drawer export set (report/JSON/cURL).
    Flat schema: `chain_id, hop, from, to, status, duration_ms`. SEO crowd lives
    in spreadsheets.
