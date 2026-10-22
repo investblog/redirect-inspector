@@ -2,6 +2,15 @@
 
 All notable changes to Redirect Inspector are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **Copied chain summary** — every hop is listed, including consecutive hops on the same host (e.g. `302 /path → /path/`), and URLs are copied verbatim; previously such hops were dropped and the trailing slash and `#fragment` were trimmed, so the "Final URL" could differ from the address bar
+- **Clear racing a new chain** — a chain recorded at the moment of Clear could bring the cleared records back; all log changes (record, Clear, Undo, first-install example) are now serialized
+- **Undo after Clear** — restores chains recorded just before Clear that the panel had not shown yet
+- **Final URL on pages with iframes** — an iframe loading after the page no longer replaces the tab address used to resolve the final URL
+
 ## [2.3.1] - 2026-10-01
 
 ### Fixed
