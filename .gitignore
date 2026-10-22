@@ -33,6 +33,9 @@ npm-debug.log*
 # Temp
 temp/
 
+# Internal implementation plans (maintainer-only, not product docs)
+docs/plans/
+
 # Claude Code local settings & instructions
 .claude/
 CLAUDE.md
