@@ -13,6 +13,15 @@ export interface MessageMap {
     request: Record<string, never>;
     response: {
       success: boolean;
+      /** The removed records, read inside the write queue — the Undo snapshot. */
+      cleared?: RedirectRecord[];
+      error?: string;
+    };
+  };
+  'redirect-inspector:restore-log': {
+    request: { records: RedirectRecord[] };
+    response: {
+      success: boolean;
       error?: string;
     };
   };

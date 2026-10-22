@@ -4,6 +4,7 @@ import {
   chainsById,
   cleanupTabState,
   clearAllBadges,
+  clearRedirectLog,
   disableNewsAlarm,
   enableNewsAlarm,
   forceFinalizeTabChains,
@@ -12,6 +13,7 @@ import {
   handleRequestCompleted,
   handleRequestError,
   handleWebNavigationCommitted,
+  restoreRedirectRecords,
   seedDemoRecordIfEmpty,
   serializeChainPreview,
   setupNews,
@@ -107,14 +109,25 @@ export default defineBackground(() => {
     }
 
     if (type === 'redirect-inspector:clear-log' || type === 'redirect-inspector:clear-redirects') {
-      browser.storage.local
-        .set({ [REDIRECT_LOG_KEY]: [] })
-        .then(() => {
+      clearRedirectLog()
+        .then((cleared) => {
           clearAllBadges();
-          sendResponse({ success: true });
+          sendResponse({ success: true, cleared });
         })
         .catch((error) => {
           console.error('Failed to clear redirect log', error);
+          sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' });
+        });
+
+      return true;
+    }
+
+    if (type === 'redirect-inspector:restore-log') {
+      const records = Array.isArray(message?.payload?.records) ? message.payload.records : [];
+      restoreRedirectRecords(records)
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => {
+          console.error('Failed to restore redirect log', error);
           sendResponse({ success: false, error: (error as Error)?.message || 'Unknown error' });
         });
 

@@ -1,4 +1,3 @@
-import { browser } from 'wxt/browser';
 import type { Chain, RedirectEvent, RedirectRecord } from '../shared/types/redirect';
 import {
   renderAwaitingBadge,
@@ -26,10 +25,9 @@ import {
   formatTimestamp,
   getHeaderValue,
   isNoisyUrl,
-  REDIRECT_LOG_KEY,
   sameHost,
 } from './helpers';
-import { appendRedirectRecord } from './log';
+import { appendRedirectRecord, seedRedirectLogIfEmpty } from './log';
 import { closeProbeTab, handleProbeDirectCompletion, probeTabs } from './probe';
 
 // ---- State Maps ----
@@ -68,11 +66,6 @@ function appendEventToChain(chain: Chain, event: RedirectEvent): void {
  */
 export async function seedDemoRecordIfEmpty(): Promise<void> {
   try {
-    const { [REDIRECT_LOG_KEY]: existing = [] } = await browser.storage.local.get(REDIRECT_LOG_KEY);
-    if ((existing as RedirectRecord[]).length > 0) {
-      return;
-    }
-
     const now = Date.now();
     const record: RedirectRecord = {
       id: 'demo-301-st',
@@ -99,7 +92,7 @@ export async function seedDemoRecordIfEmpty(): Promise<void> {
       classification: 'normal',
     };
 
-    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: [record] });
+    await seedRedirectLogIfEmpty(record);
   } catch (error) {
     console.warn('Failed to seed demo record', error);
   }

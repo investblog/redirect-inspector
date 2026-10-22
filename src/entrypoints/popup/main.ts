@@ -4,7 +4,6 @@
  */
 
 import { browser } from 'wxt/browser';
-import { MAX_RECORDS } from '../../background/helpers';
 import { analyzeChain } from '../../shared/analysis/heuristics';
 import { t, tPlural } from '../../shared/i18n';
 import { sendMessageSafe } from '../../shared/messaging';
@@ -1424,56 +1423,47 @@ async function undoClear(): Promise<void> {
     showStatus('');
     return;
   }
-  try {
-    // Merge, don't overwrite: chains captured after the clear must survive.
-    const stored = await browser.storage.local.get({ [REDIRECT_LOG_KEY]: [] });
-    const current = stored[REDIRECT_LOG_KEY] as RedirectRecord[];
-    const restoredIds = new Set(records.map((record) => record.id));
-    const merged = [...current.filter((record) => !restoredIds.has(record.id)), ...records].slice(0, MAX_RECORDS);
-    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: merged });
-    allRedirectRecords = merged;
-    applyFilters(allRedirectRecords);
-    updateFooterCount();
-    updatePopupHeight();
-    showStatus('');
-    updateStatusForRecords(applyFilters(allRedirectRecords));
-  } catch (error) {
-    console.error('Undo clear failed', error);
+  // The background merges the snapshot in its write queue, so chains captured
+  // after the clear survive and a concurrent append cannot be lost.
+  const response = await sendMessageSafe<{ success: boolean }>({
+    type: 'redirect-inspector:restore-log',
+    payload: { records },
+  });
+  if (!response || response.__error || !response.success) {
+    console.error('Undo clear failed', response?.__error);
     showStatus(t('loadFailed'), 'error');
+    return;
   }
+  // Re-read instead of trusting a possibly stale response: a later append may
+  // already have refreshed the list via storage.onChanged.
+  await fetchRedirectLog();
+  showStatus('');
+  updateStatusForRecords(applyFilters(allRedirectRecords));
 }
 
 async function clearRedirectLog(): Promise<void> {
-  // Pending previews are transient — restoring them would plant stuck entries.
-  const snapshot = allRedirectRecords.filter((record) => !record.pending);
-  lastClearedRecords = snapshot.length > 0 ? snapshot : null;
   showStatus(t('clearingStatus'), 'info');
 
-  const response = await sendMessageSafe<{ success: boolean }>({
+  const response = await sendMessageSafe<{ success: boolean; cleared?: RedirectRecord[] }>({
     type: 'redirect-inspector:clear-log',
   });
 
-  if (response && !response.__error && response.success) {
-    allRedirectRecords = [];
-    applyFilters(allRedirectRecords);
-    updateFooterCount();
-    updatePopupHeight();
-    showClearedWithUndo();
+  // No local fallback: the popup never writes the log itself — a direct write
+  // would bypass the background write queue and race with appends.
+  if (!response || response.__error || !response.success) {
+    console.error('Clear failed:', response?.__error);
+    showStatus(t('clearFailed'), 'error');
     return;
   }
 
-  try {
-    await browser.storage.local.set({ [REDIRECT_LOG_KEY]: [] });
-    allRedirectRecords = [];
-    applyFilters(allRedirectRecords);
-    updateFooterCount();
-    updatePopupHeight();
-    showClearedWithUndo();
-  } catch (err) {
-    const error = err as Error;
-    console.error('Local clear failed:', error);
-    showStatus(t('clearFailed'), 'error');
-  }
+  // Undo snapshot comes from the background, read inside the write queue: it
+  // includes records appended just before Clear that this popup never rendered
+  // (and no pending previews — those are never persisted).
+  const cleared = Array.isArray(response.cleared) ? response.cleared : [];
+  lastClearedRecords = cleared.length > 0 ? cleared : null;
+
+  await fetchRedirectLog();
+  showClearedWithUndo();
 }
 
 // ---- Header scroll (collapse controls on scroll down, show on scroll up) ----

@@ -41,6 +41,8 @@ export {
 
 export * from './helpers';
 
+export { clearRedirectLog, restoreRedirectRecords } from './log';
+
 export { checkNews, disableNewsAlarm, enableNewsAlarm, setupNews } from './news';
 
 export { closeProbeTab, probeTabs, setupProbe, startUrlProbe } from './probe';
