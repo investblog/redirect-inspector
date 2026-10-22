@@ -835,9 +835,10 @@ export function handleWebNavigationCommitted(
     return;
   }
 
-  tabLastCommittedUrl.set(details.tabId, details.url);
-
   if (details.frameId === 0) {
+    // Tab-level URL: an iframe commit must not overwrite it (it feeds resolveFinalUrl).
+    tabLastCommittedUrl.set(details.tabId, details.url);
+
     const pending = pendingClientRedirects.get(details.tabId);
     if (pending) {
       const chain = chainsById.get(pending.chainId);
