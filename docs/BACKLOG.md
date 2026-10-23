@@ -22,6 +22,25 @@ user reports.
    languages (store search visibility), UI stays fully translated in the current 7.
    Competitor ships 52 locales this way.
 
+## Bugs found by the harness (2026-10-22)
+
+- **JS redirect after load is not a hop (Chromium)** — `webRequest.onCompleted`
+  arrives just before `webNavigation.onCommitted`, and `handleWebNavigationCommitted`
+  then cancels the client-redirect wait and records the chain ~250 ms after
+  commit. A `location.href = …` the page runs later (0.8 s in the harness) starts
+  a new, unrelated navigation instead of a `JS` hop. Firefox keeps the chain open
+  (different event order) and attaches it. Decide what the wait should key on
+  before touching it — it also sets how long manual-check tabs stay open.
+
+## Client-side landing — follow-ups
+
+- **Analysis**: a `CLIENT_LANDING` info heuristic ("final page set client-side;
+  crawlers see <finalUrl>"), a tag chip, the row in the analysis drawer and its
+  report; the open drawer should refresh when a landing is patched in.
+- **Masking scope**: hop URLs (`events[].from/to`) are still stored with their
+  query unmasked (pre-existing); tokens in path segments and nested encoded URLs
+  are not detected. Decide deliberately — masking hops changes what users see.
+
 ## Cosmetic
 
 - **Meta-refresh badge** — client-side hops (script and meta refresh) currently

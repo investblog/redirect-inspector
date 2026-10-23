@@ -4,6 +4,11 @@ All notable changes to Redirect Inspector are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Address bar after the redirect** — when the final page changes its own address without a server request (a `#/route` set by a single-page app, `history.replaceState`/`pushState`), the card shows it as a separate dashed `#` / `SPA` row under the hops, e.g. `# ⇢ #/registration`; it is not counted as a hop. Also in satellite rows, in search and as `Address bar:` in the copied summary. Works for manual checks too (the check waits up to 2 s for such a change)
+- **Sensitive values masked** — tokens, codes, keys and similar values in such addresses are replaced with `***` before anything is stored; a masked address cannot be opened from the card
+
 ### Fixed
 
 - **Copied chain summary** — every hop is listed, including consecutive hops on the same host (e.g. `302 /path → /path/`), and URLs are copied verbatim; previously such hops were dropped and the trailing slash and `#fragment` were trimmed, so the "Final URL" could differ from the address bar
