@@ -13,8 +13,14 @@ user reports.
    Since 2.3.1 the groundwork is there: every probe ends in a record (20s timeout
    finalizes stalled chains), and log writes are serialized (`background/log.ts`),
    so parallel probes no longer lose records. A local harness that loads the
-   built extension into Chromium and probes redirect/hang endpoints proved both;
-   rebuild it for the bulk-check tests (it was a scratch script, not committed).
+   built extension into Chromium and probes redirect/hang endpoints proved both.
+   Since 2.4.0 (2026-10-22): the harness exists again, for Chromium (Playwright)
+   AND Firefox (web-ext + RDP) — `temp/harness/` (local, gitignored), shared
+   scenarios in `scenarios.cjs`; extend it for bulk check instead of rebuilding.
+   Timing input: a probe tab now stays open up to 2 s after its chain for a
+   client-side landing (harness: Chromium p3 closed within the 3.5 s check, exact
+   value not recorded; Firefox measured 5.5 s because of its 5 s client-redirect
+   wait) — budget that into the concurrency cap.
 2. **CSV export** (S) — add to the analysis-drawer export set (report/JSON/cURL).
    Flat schema: `chain_id, hop, from, to, status, duration_ms`. SEO crowd lives
    in spreadsheets.

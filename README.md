@@ -9,11 +9,12 @@ Real-time redirect console for developers — trace server & client redirects, r
 ## Features
 
 - **Real-time capture** — every server redirect (301, 302, 307, 308), HSTS upgrade, and client-side navigation (JS, meta-refresh) recorded as it happens
-- **Check any URL** — paste a URL into the bottom dock; it opens in an invisible background tab, the chain is captured through the normal pipeline, and the tab closes itself; a page that never finishes loading ends after 20s with a "Timed out" result that keeps the hops captured so far
+- **Check any URL** — paste a URL into the bottom dock; it opens in an invisible background tab, the chain is captured through the normal pipeline, and the tab closes itself (waiting up to 2 s for a client-side address change); a page that never finishes loading ends after 20s with a "Timed out" result that keeps the hops captured so far
 - **Session grouping** — chains from the same browsing session grouped by tab, time, and domain affinity
 - **9-heuristic analysis** — loops, ping-pong, long chains, mixed types, auth bounces, locale/consent, tracking noise, CDN detection, final outcome
 - **Timing** — total chain duration on every card, per-hop deltas in the analysis drawer
 - **Readable hops** — same-host hops show what actually changed (`http:// → https://`, `/page → /page/`) instead of a duplicated hostname
+- **Address bar after the redirect** — when the final page changes its own address without a server request (a `#/route` added by a single-page app, `history.replaceState`/`pushState`), a dashed `#`/`SPA` row under the hops shows where the browser really ended up; it is not counted as a hop, and tokens or keys in that address are masked before storage
 - **Search & noise filtering** — substring filter across all chain URLs; tracking pixels, analytics beacons, and media sub-requests hidden by default (incl. RU ad infrastructure: Yandex ads, ad.mail.ru, VK ads)
 - **Export** — copy a clean summary or full analysis report, download the raw chain as JSON, or copy a ready `curl` command that reproduces the chain server-side
 - **Side panel by default** — on Chrome/Edge the toolbar icon opens the side panel (popup remains the Firefox surface); undo-able Clear, keyboard shortcuts (`/`, `?`, `Esc`, Ctrl+click to open a URL), and a built-in help drawer
@@ -60,7 +61,7 @@ npm run check          # Typecheck + lint + test
 - TypeScript strict mode
 - Vanilla DOM + CSS custom properties (no framework)
 - Chrome MV3 + Firefox MV2 + Edge MV3 builds
-- Vitest — 75 tests across classify, helpers, and session grouping
+- Vitest — unit tests for classification, chain and log logic, the client-side landing window, export and helpers
 - Zero runtime dependencies
 
 ## Privacy
@@ -69,7 +70,7 @@ Redirect Inspector makes zero network requests by default. No analytics, no tele
 
 The only optional network activity is the 301.sh news feed: if (and only if) you enable news notifications, the extension fetches `https://301.sh/posts.json` a few times a day to show a browser notification about new articles. Nothing is ever sent — the request carries no identifiers or browsing data, and disabling the toggle stops it entirely.
 
-The manual "check a URL" feature does not make requests either: it opens the URL as a regular browser navigation in an inactive tab (your cookies apply, the visit lands in history) and closes the tab once the chain is recorded.
+The manual "check a URL" feature does not make requests either: it opens the URL as a regular browser navigation in an inactive tab (your cookies apply, the visit lands in history) and closes the tab once the chain is recorded — after up to 2 s more for a client-side address change (longer, capped at 10 s, only while the page keeps changing it).
 
 ## Related
 
