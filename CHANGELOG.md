@@ -2,7 +2,7 @@
 
 All notable changes to Redirect Inspector are documented here.
 
-## [2.4.0] - not yet released
+## [2.4.0] - 2026-10-23
 
 ### Added
 
