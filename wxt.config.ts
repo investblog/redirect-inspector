@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: ({ browser }) => ({
     name: '__MSG_extName__',
     description: '__MSG_extDescription__',
-    version: '2.3.1',
+    version: '2.4.0',
     default_locale: 'en',
     author: '301.st — Smart Traffic <support@301.st>',
     homepage_url: 'https://301.st',
@@ -62,6 +62,12 @@ export default defineConfig({
       },
     }),
   }),
+
+  // The sources zip goes to AMO reviewers. CI builds it from a clean checkout, but a
+  // local `zip:all` would also pack gitignored internals (store drafts, harness, plans).
+  zip: {
+    excludeSources: ['temp/**', 'docs/plans/**'],
+  },
 
   hooks: {
     'build:manifestGenerated': (wxt, manifest) => {
