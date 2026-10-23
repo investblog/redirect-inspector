@@ -35,6 +35,25 @@ export interface RedirectRecord {
   demo?: boolean;
   /** Captured via the manual "check a URL" probe (background tab navigation). */
   manual?: boolean;
+  /**
+   * Where the address bar ended up after same-document changes (hash, History API)
+   * on the final page — no server request involved, so not a hop. Set only when it
+   * differs from finalUrl.
+   */
+  clientLanding?: ClientLanding;
+}
+
+export interface ClientLanding {
+  /** Final address after client-side changes; sensitive values already masked. */
+  url: string;
+  /** 'fragment' — only the hash changed; 'history' — History API (or mixed). */
+  via: 'fragment' | 'history';
+  /** From the final document's completion to the last change, ms; 0 if earlier. */
+  delayMs: number;
+  /** How many changes were collapsed into this one. */
+  changes: number;
+  /** Values were masked — the URL may not work, so it must not be opened. */
+  redacted: boolean;
 }
 
 export type Classification = 'normal' | 'likely-tracking' | 'likely-media';

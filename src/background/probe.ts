@@ -1,8 +1,9 @@
 /**
  * Manual "check a URL" probes. The URL opens in an inactive tab so the normal
  * webRequest pipeline records the chain — the extension itself makes no
- * request. The tab is closed as soon as its top-level chain finalizes (with a
- * timeout fallback), and the resulting record is flagged `manual`.
+ * request. The tab is closed once its top-level chain finalizes and the
+ * client-side landing window settles (≤2s without an address change; timeout
+ * fallback), and the resulting record is flagged `manual`.
  *
  * Caveat by design: the navigation carries the user's cookies, so the captured
  * chain is the personalized one, not a clean-crawler view.
@@ -11,6 +12,7 @@
 import { browser } from 'wxt/browser';
 import type { RedirectRecord } from '../shared/types/redirect';
 import { formatTimestamp } from './helpers';
+import { bindLandingToRecord } from './landing';
 import { appendRedirectRecord } from './log';
 
 /** tabId -> originally requested URL. */
@@ -57,12 +59,24 @@ export async function startUrlProbe(
   }
 
   try {
-    const tab = await browser.tabs.create({ url, active: false });
-    if (typeof tab.id === 'number') {
-      const tabId = tab.id;
-      probeTabs.set(tabId, url);
-      persistProbeTabs();
-      setTimeout(() => handleProbeTimeout(tabId, finalizeTabChains), PROBE_TAB_TIMEOUT_MS);
+    // Register the tab as a probe BEFORE it navigates: creating it with the URL
+    // starts the navigation before tabs.create resolves, so the first requests
+    // (and an early client-side landing) would not be recognized as the probe's.
+    const tab = await browser.tabs.create({ url: 'about:blank', active: false });
+    if (typeof tab.id !== 'number') {
+      return { success: false, error: 'Failed to open tab' };
+    }
+    const tabId = tab.id;
+    probeTabs.set(tabId, url);
+    persistProbeTabs();
+    setTimeout(() => handleProbeTimeout(tabId, finalizeTabChains), PROBE_TAB_TIMEOUT_MS);
+    try {
+      await browser.tabs.update(tabId, { url });
+    } catch (error) {
+      // Nothing navigated: unregister first, so the timeout does not write a
+      // record for a check that never ran, then drop the blank tab.
+      closeProbeTab(tabId);
+      throw error;
     }
     return { success: true };
   } catch (error) {
@@ -145,7 +159,16 @@ export function handleProbeDirectCompletion(
       events: [],
       classification: 'normal',
     };
-    void appendRedirectRecord(record).then(() => closeProbeTab(tabId));
+    // Usually settled by now (the probe waits ≤2s for a first change); if the
+    // page is still changing its address, the landing is patched on and the
+    // tab closes when the window settles.
+    const bound = bindLandingToRecord(tabId, undefined, record.id, record.finalUrl, () => closeProbeTab(tabId));
+    if (bound.landing) {
+      record.clientLanding = bound.landing;
+    }
+    void appendRedirectRecord(record).then(() => {
+      if (!bound.deferred) closeProbeTab(tabId);
+    });
   }, PROBE_NO_REDIRECT_SETTLE_MS);
 }
 

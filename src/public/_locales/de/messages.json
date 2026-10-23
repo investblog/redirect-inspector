@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Leeren lässt sich 10 Sekunden lang rückgängig machen"
+	},
+	"landingStepTitle": {
+		"message": "Adresse clientseitig geändert – ohne Serveranfrage"
+	},
+	"landingRedactedHint": {
+		"message": "Sensible Werte ausgeblendet – dieser Link lässt sich nicht öffnen"
 	}
 }

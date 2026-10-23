@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Limpiar se puede deshacer durante 10 segundos"
+	},
+	"landingStepTitle": {
+		"message": "Dirección cambiada en el cliente, sin solicitud al servidor"
+	},
+	"landingRedactedHint": {
+		"message": "Valores sensibles ocultos: no se puede abrir este enlace"
 	}
 }

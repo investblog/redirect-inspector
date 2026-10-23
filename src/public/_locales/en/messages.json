@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Clear can be undone within 10 seconds"
+	},
+	"landingStepTitle": {
+		"message": "Address changed client-side — no server request"
+	},
+	"landingRedactedHint": {
+		"message": "Sensitive values hidden — this link can't be opened"
 	}
 }

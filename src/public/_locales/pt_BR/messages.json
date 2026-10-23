@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Limpar pode ser desfeito em até 10 segundos"
+	},
+	"landingStepTitle": {
+		"message": "Endereço alterado no cliente — sem requisição ao servidor"
+	},
+	"landingRedactedHint": {
+		"message": "Valores sensíveis ocultos — este link não pode ser aberto"
 	}
 }

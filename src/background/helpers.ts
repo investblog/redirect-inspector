@@ -8,6 +8,13 @@ export const CLIENT_REDIRECT_EXTENDED_AWAIT_MS = 5 * 1000;
 
 export const CHAIN_FINALIZATION_DELAY_MS = 250;
 
+/** Client-side landing: max wait for the first change after the final page loads; also the hard cap. */
+export const LANDING_WINDOW_MS = 10 * 1000;
+/** The window settles after this long without another change. */
+export const LANDING_QUIET_MS = 1000;
+/** Manual checks wait less for a first change — the probe tab stays open that long. */
+export const PROBE_LANDING_WAIT_MS = 2 * 1000;
+
 export const TRACKING_KEYWORDS = [
   'pixel',
   'track',
@@ -286,4 +293,113 @@ export function sameHost(a: string, b: string): boolean {
   } catch {
     return false;
   }
+}
+
+// ---- Sensitive URL parts ----
+
+// Parameter names (lowercased, '-' -> '_') whose values are credentials. Exact
+// matches only, plus the *_token / *_secret suffixes — a broad substring rule
+// would mask harmless names like "authority" or "session_length".
+const SENSITIVE_PARAM_NAMES = new Set([
+  'token',
+  'code',
+  'jwt',
+  'key',
+  'apikey',
+  'api_key',
+  'secret',
+  'password',
+  'passwd',
+  'pwd',
+  'ticket',
+  'credential',
+  'credentials',
+  'assertion',
+  'samlresponse',
+  'samlrequest',
+  'session_id',
+  'sessionid',
+  'sid',
+  'auth',
+  'authorization',
+]);
+
+const REDACTED = '***';
+
+function isSensitiveParamName(rawName: string): boolean {
+  let name = rawName;
+  try {
+    name = decodeURIComponent(rawName);
+  } catch {
+    // keep the raw spelling
+  }
+  name = name.trim().toLowerCase().replace(/-/g, '_');
+  return SENSITIVE_PARAM_NAMES.has(name) || name.endsWith('_token') || name.endsWith('_secret');
+}
+
+/** Mask values of sensitive `k=v` pairs; untouched pairs keep their exact spelling. */
+function maskParams(params: string): string {
+  return params
+    .split('&')
+    .map((pair) => {
+      const eq = pair.indexOf('=');
+      if (eq <= 0 || eq === pair.length - 1) return pair;
+      return isSensitiveParamName(pair.slice(0, eq)) ? `${pair.slice(0, eq + 1)}${REDACTED}` : pair;
+    })
+    .join('&');
+}
+
+// A bare fragment that looks like a credential: a JWT, or a long opaque run of
+// letters and digits (no '/', so hash routes are left alone).
+const JWT_RE = /^eyJ[\w-]*\.[\w-]*\.[\w-]*$/;
+const OPAQUE_TOKEN_RE = /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9_]{32,}$/;
+// base64url may contain '-': accept it only in mixed case with digits — slugs
+// ("chapter-12-introduction-…") are lowercase.
+const BASE64URL_TOKEN_RE = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])[A-Za-z0-9_-]{32,}$/;
+
+function maskFragment(fragment: string): string {
+  const q = fragment.indexOf('?');
+  if (q >= 0) return `${fragment.slice(0, q + 1)}${maskParams(fragment.slice(q + 1))}`;
+  if (fragment.includes('=')) return maskParams(fragment);
+  return JWT_RE.test(fragment) || OPAQUE_TOKEN_RE.test(fragment) || BASE64URL_TOKEN_RE.test(fragment)
+    ? REDACTED
+    : fragment;
+}
+
+/**
+ * Mask credentials in a URL before it is persisted: values of sensitive query
+ * and fragment parameters, bare token fragments, and `user:pass@`. Works on the
+ * raw string, so a URL with nothing to mask comes back byte for byte. Returns
+ * null for an unparsable URL — fail closed, the caller must not store it.
+ */
+export function maskSensitiveUrl(url: string): { url: string; redacted: boolean } | null {
+  try {
+    new URL(url);
+  } catch {
+    return null;
+  }
+
+  let rest = url;
+  let fragment: string | null = null;
+  const hash = rest.indexOf('#');
+  if (hash >= 0) {
+    fragment = rest.slice(hash + 1);
+    rest = rest.slice(0, hash);
+  }
+
+  let query: string | null = null;
+  const q = rest.indexOf('?');
+  if (q >= 0) {
+    query = rest.slice(q + 1);
+    rest = rest.slice(0, q);
+  }
+
+  const withoutUserInfo = rest.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#@]*@/i, '$1');
+
+  const masked =
+    withoutUserInfo +
+    (query === null ? '' : `?${maskParams(query)}`) +
+    (fragment === null ? '' : `#${maskFragment(fragment)}`);
+
+  return { url: masked, redacted: masked !== url };
 }

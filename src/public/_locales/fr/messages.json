@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Effacer peut être annulé pendant 10 secondes"
+	},
+	"landingStepTitle": {
+		"message": "Adresse modifiée côté client — sans requête au serveur"
+	},
+	"landingRedactedHint": {
+		"message": "Valeurs sensibles masquées — ce lien ne peut pas être ouvert"
 	}
 }

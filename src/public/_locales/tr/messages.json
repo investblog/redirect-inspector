@@ -379,5 +379,11 @@
 	},
 	"tipUndo": {
 		"message": "Temizleme 10 saniye içinde geri alınabilir"
+	},
+	"landingStepTitle": {
+		"message": "Adres istemci tarafında değişti — sunucuya istek yok"
+	},
+	"landingRedactedHint": {
+		"message": "Hassas değerler gizlendi — bu bağlantı açılamaz"
 	}
 }

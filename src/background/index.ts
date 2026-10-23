@@ -41,6 +41,8 @@ export {
 
 export * from './helpers';
 
+export { disarmLandingContexts, handleLandingChange, handleLandingCommitted } from './landing';
+
 export { clearRedirectLog, restoreRedirectRecords } from './log';
 
 export { checkNews, disableNewsAlarm, enableNewsAlarm, setupNews } from './news';

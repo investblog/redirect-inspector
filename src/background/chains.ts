@@ -1,3 +1,4 @@
+import { browser } from 'wxt/browser';
 import type { Chain, RedirectEvent, RedirectRecord } from '../shared/types/redirect';
 import {
   renderAwaitingBadge,
@@ -27,6 +28,13 @@ import {
   isNoisyUrl,
   sameHost,
 } from './helpers';
+import {
+  armLandingContext,
+  bindLandingToRecord,
+  closeLandingContext,
+  discardLandingContext,
+  noteLandingCompleted,
+} from './landing';
 import { appendRedirectRecord, seedRedirectLogIfEmpty } from './log';
 import { closeProbeTab, handleProbeDirectCompletion, probeTabs } from './probe';
 
@@ -100,12 +108,21 @@ export async function seedDemoRecordIfEmpty(): Promise<void> {
 
 // ---- Chain Lifecycle ----
 
+/**
+ * A manual check navigates its tab via tabs.update, so Chrome reports this
+ * extension's own origin as the initiator — not a page the user would recognize.
+ */
+function pageInitiator(initiator: string | undefined): string | undefined {
+  const ownOrigin = browser.runtime?.getURL?.('/');
+  return initiator && ownOrigin?.startsWith(initiator) ? undefined : initiator;
+}
+
 export function createChain(details: { tabId: number; initiator?: string; timeStamp?: number }): Chain {
   const chain: Chain = {
     id: crypto.randomUUID(),
     requestIds: new Set(),
     tabId: details.tabId,
-    initiator: details.initiator,
+    initiator: pageInitiator(details.initiator),
     initiatedAt: formatTimestamp(details.timeStamp),
     events: [],
     initialUrl: undefined,
@@ -436,20 +453,42 @@ async function finalizeChainRecord(chainId: string): Promise<void> {
   // Manual "check a URL" probe: only the TOP-LEVEL navigation is the probe
   // result — sub-resource chains in the same tab (redirecting pixels etc.)
   // must neither get the flag nor close the tab mid-flight.
-  if (typeof chain.tabId === 'number' && probeTabs.has(chain.tabId) && details.type === 'main_frame') {
+  const tabId = chain.tabId;
+  const isProbeResult = typeof tabId === 'number' && probeTabs.has(tabId) && details.type === 'main_frame';
+  if (isProbeResult) {
     record.manual = true;
-    closeProbeTab(chain.tabId);
   }
 
-  const allEventsNoisy = preparedEvents.allEventsNoisy;
+  // Manually checked chains are always persisted — a user probing a tracker
+  // URL expects a result even when every hop is classified as noise.
+  const persist = !preparedEvents.allEventsNoisy || record.manual;
+
+  // Client-side landing: take it now if the window already settled, else it is
+  // patched onto this record later. A probe tab stays open until then.
+  if (persist && details.type === 'main_frame' && typeof tabId === 'number' && tabId >= 0) {
+    const bound = bindLandingToRecord(
+      tabId,
+      chain.id,
+      record.id,
+      record.finalUrl,
+      isProbeResult ? () => closeProbeTab(tabId) : undefined,
+    );
+    if (bound.landing) {
+      record.clientLanding = bound.landing;
+    }
+    if (isProbeResult && !bound.deferred) {
+      closeProbeTab(tabId);
+    }
+  } else if (details.type === 'main_frame' && typeof tabId === 'number' && tabId >= 0) {
+    // Not persisted (all hops are noise; a probe result is always persisted).
+    discardLandingContext(tabId, chain.id);
+  }
 
   // Drop the chain from state before the async write, so a concurrent
   // force-finalize (tab close racing a probe timeout) cannot record it twice.
   cleanupChain(chain);
 
-  // Manually checked chains are always persisted — a user probing a tracker
-  // URL expects a result even when every hop is classified as noise.
-  if (!allEventsNoisy || record.manual) {
+  if (persist) {
     await appendRedirectRecord(record);
     updateBadgeForRecord(record);
   }
@@ -522,7 +561,7 @@ export function attachRequestToChain(
     tabChains.set(details.tabId, chain.id);
   }
 
-  if (!chain.initiator && details.initiator) {
+  if (!chain.initiator && pageInitiator(details.initiator)) {
     chain.initiator = details.initiator;
   }
 
@@ -683,6 +722,10 @@ export async function finalizeChain(
     errorMessage: errorMessage || null,
   };
 
+  if (details.type === 'main_frame' && !errorMessage && typeof details.tabId === 'number' && details.tabId >= 0) {
+    noteLandingCompleted(details.tabId, chain.id, details.timeStamp);
+  }
+
   // Noisy URLs (Cloudflare challenges, analytics, etc.) — finalize immediately, never await
   if (isNoisyUrl(details.url)) {
     scheduleChainFinalization(chain);
@@ -772,6 +815,11 @@ export function handleBeforeRequest(details: chrome.webRequest.WebRequestBodyDet
       }
     }
 
+    // Every top-level request is a document boundary for the client-side landing.
+    if (details.type === 'main_frame' && typeof details.tabId === 'number' && details.tabId >= 0) {
+      armLandingContext(details.tabId, chain?.id, probeTabs.has(details.tabId), details.url, details.timeStamp);
+    }
+
     if (!chain) {
       return;
     }
@@ -793,6 +841,7 @@ export function handleRequestCompleted(details: chrome.webRequest.WebResponseCac
     // Probe URL that never redirected: no chain exists, so nothing would be
     // recorded — let the probe module synthesize a zero-hop manual record.
     if (details.type === 'main_frame' && !getChainByRequestId(details.requestId)) {
+      noteLandingCompleted(details.tabId, undefined, details.timeStamp);
       handleProbeDirectCompletion(details, (tabId) => tabChains.has(tabId));
     }
   } catch (error) {
@@ -819,6 +868,8 @@ export function cleanupTabState(tabId: number): void {
   // unfinished ones get an explicit error instead of vanishing.
   forceFinalizeTabChains(tabId, 'Tab closed before the chain completed');
   tabChains.delete(tabId);
+  // After the chains are recorded, so a still-open landing window is flushed onto its record.
+  closeLandingContext(tabId);
 }
 
 export function handleWebNavigationCommitted(

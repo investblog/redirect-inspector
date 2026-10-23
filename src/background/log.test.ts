@@ -32,9 +32,10 @@ vi.mock('wxt/browser', () => ({
   },
 }));
 
-const { appendRedirectRecord, clearRedirectLog, restoreRedirectRecords, seedRedirectLogIfEmpty } = await import(
-  './log'
-);
+const { appendRedirectRecord, clearRedirectLog, restoreRedirectRecords, seedRedirectLogIfEmpty, updateClientLanding } =
+  await import('./log');
+
+const LANDING = { url: 'https://a.example/#/x', via: 'fragment' as const, delayMs: 10, changes: 1, redacted: false };
 
 function rec(id: string): RedirectRecord {
   return { id, tabId: 1, initiatedAt: '2026-10-22T00:00:00.000Z', events: [] };
@@ -114,5 +115,19 @@ describe('redirect log write queue', () => {
     await expect(appendRedirectRecord(rec('a'))).resolves.toBeUndefined();
     await appendRedirectRecord(rec('b'));
     expect(ids()).toEqual(['b']);
+  });
+
+  it('attaches a landing to the record just appended, even when both are queued together', async () => {
+    store.redirectLog = [rec('other')];
+    await Promise.all([appendRedirectRecord(rec('r')), updateClientLanding('r', LANDING)]);
+    const log = store.redirectLog as RedirectRecord[];
+    expect(log.find((r) => r.id === 'r')?.clientLanding).toEqual(LANDING);
+    expect(log.find((r) => r.id === 'other')?.clientLanding).toBeUndefined();
+  });
+
+  it('does not resurrect a cleared record when its landing arrives after Clear', async () => {
+    store.redirectLog = [rec('r')];
+    await Promise.all([clearRedirectLog(), updateClientLanding('r', LANDING)]);
+    expect(ids()).toEqual([]);
   });
 });

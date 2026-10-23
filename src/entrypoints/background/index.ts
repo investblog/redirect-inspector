@@ -6,10 +6,13 @@ import {
   clearAllBadges,
   clearRedirectLog,
   disableNewsAlarm,
+  disarmLandingContexts,
   enableNewsAlarm,
   forceFinalizeTabChains,
   handleBeforeRedirect,
   handleBeforeRequest,
+  handleLandingChange,
+  handleLandingCommitted,
   handleRequestCompleted,
   handleRequestError,
   handleWebNavigationCommitted,
@@ -77,7 +80,15 @@ export default defineBackground(() => {
   // ---- webNavigation ----
   if (browser?.webNavigation?.onCommitted) {
     browser.webNavigation.onCommitted.addListener(handleWebNavigationCommitted as any);
+    browser.webNavigation.onCommitted.addListener(handleLandingCommitted as any);
   }
+
+  // Same-document changes on a chain's final page (hash / History API): no
+  // request, so webRequest never sees them — recorded as the client-side landing.
+  browser?.webNavigation?.onReferenceFragmentUpdated?.addListener((details: any) =>
+    handleLandingChange(details, 'fragment'),
+  );
+  browser?.webNavigation?.onHistoryStateUpdated?.addListener((details: any) => handleLandingChange(details, 'history'));
 
   // ---- tab cleanup ----
   if (browser?.tabs?.onRemoved) {
@@ -109,6 +120,8 @@ export default defineBackground(() => {
     }
 
     if (type === 'redirect-inspector:clear-log' || type === 'redirect-inspector:clear-redirects') {
+      // Open landing windows stop first: nothing may patch a record restored by Undo.
+      disarmLandingContexts();
       clearRedirectLog()
         .then((cleared) => {
           clearAllBadges();

@@ -953,6 +953,27 @@ body.sidepanel .controls__summary {
   min-width: 0;
 }
 
+/* Client-side landing: the page changed its own address (hash / History API).
+   Not a hop — outlined chip and dashed arrow set it apart from server redirects. */
+.redirect-step--client {
+  color: var(--text-muted, #6b7280);
+}
+
+.redirect-step--client .redirect-step__status {
+  background: transparent;
+  color: var(--info, #3B82F6);
+  border: 1px dashed color-mix(in srgb, var(--info, #3B82F6) 60%, transparent);
+  padding: calc(0.1rem - 1px) calc(0.3rem - 1px);
+}
+
+.redirect-step--client .redirect-step__arrow {
+  color: var(--info, #3B82F6);
+}
+
+.satellite-item .redirect-step--client {
+  font-size: 0.7rem;
+}
+
 /* ---- Item footer ---- */
 
 .redirect-item__footer {

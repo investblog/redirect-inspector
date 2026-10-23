@@ -37,4 +37,33 @@ describe('formatRedirectChainForExport', () => {
 
     expect(formatRedirectChainForExport(record)).toContain('Final URL: https://example.com/app/#/registration\n');
   });
+
+  it('adds the address bar line only for a client-side landing, flagging redaction', () => {
+    const base: RedirectRecord = {
+      id: 'r3',
+      tabId: 1,
+      initiatedAt: '2026-10-22T00:00:00.000Z',
+      finalUrl: 'https://example.com/app/',
+      events: [hop('https://example.com/', 'https://example.com/app/', 302)],
+    };
+    expect(formatRedirectChainForExport(base)).not.toContain('Address bar:');
+
+    const landing = {
+      url: 'https://example.com/app/#/registration',
+      via: 'fragment' as const,
+      delayMs: 900,
+      changes: 1,
+    };
+    expect(formatRedirectChainForExport({ ...base, clientLanding: { ...landing, redacted: false } })).toContain(
+      'Final URL: https://example.com/app/\nAddress bar: https://example.com/app/#/registration (changed client-side, no server request)\n',
+    );
+    expect(
+      formatRedirectChainForExport({
+        ...base,
+        clientLanding: { ...landing, url: 'https://example.com/cb#access_token=***', redacted: true },
+      }),
+    ).toContain(
+      'Address bar: https://example.com/cb#access_token=*** (changed client-side, no server request; sensitive values redacted)',
+    );
+  });
 });

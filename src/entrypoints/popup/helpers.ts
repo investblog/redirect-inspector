@@ -107,6 +107,12 @@ export function hopEndpointLabels(from: string | undefined, to: string | undefin
     return { from: fromPath || '/', to: toPath || '/' };
   }
 
+  // Only the fragment differs (client-side landing). '#' for "no fragment" —
+  // an empty label would fall back to the host.
+  if (fromUrl.hash !== toUrl.hash) {
+    return { from: fromUrl.hash || '#', to: toUrl.hash || '#' };
+  }
+
   return { from: fromHost, to: toHost };
 }
 

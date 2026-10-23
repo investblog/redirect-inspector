@@ -81,6 +81,14 @@ export function formatRedirectChainForExport(record: RedirectRecord): string {
     lines.push('', `Final URL: ${formatUrlForExport(finalUrl)}`);
   }
 
+  const landing = record?.clientLanding;
+  if (landing) {
+    const note = landing.redacted
+      ? 'changed client-side, no server request; sensitive values redacted'
+      : 'changed client-side, no server request';
+    lines.push(`Address bar: ${landing.url} (${note})`);
+  }
+
   lines.push('', FOOTER);
 
   return lines.join('\n');

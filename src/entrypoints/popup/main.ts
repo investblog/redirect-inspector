@@ -820,7 +820,7 @@ interface FilterContext {
 
 function recordMatchesQuery(record: RedirectRecord, query: string): boolean {
   if (!query) return true;
-  const haystack: Array<string | undefined> = [record.initialUrl, record.finalUrl];
+  const haystack: Array<string | undefined> = [record.initialUrl, record.finalUrl, record.clientLanding?.url];
   for (const event of record.events ?? []) {
     haystack.push(event.from, event.to);
   }
@@ -1018,6 +1018,58 @@ function renderRedirectStep(step: RedirectEvent): HTMLLIElement {
   return li;
 }
 
+/**
+ * The client-side landing as a step-like row: final server URL → address the
+ * page switched to. Not a hop — distinct chip, dashed arrow, never counted.
+ */
+function renderLandingStep(record: RedirectRecord, tag: 'li' | 'div'): HTMLElement | null {
+  const landing = record.clientLanding;
+  if (!landing) return null;
+
+  const row: HTMLElement = document.createElement(tag);
+  row.className = 'redirect-step redirect-step--client';
+  row.title = landing.redacted ? `${landing.url}\n${t('landingRedactedHint')}` : landing.url;
+
+  const chip = document.createElement('span');
+  chip.className = 'redirect-step__status';
+  chip.dataset.status = 'client';
+  chip.textContent = landing.via === 'fragment' ? '#' : 'SPA';
+  chip.title = t('landingStepTitle');
+  row.appendChild(chip);
+
+  const labels = hopEndpointLabels(record.finalUrl, landing.url);
+
+  const fromEl = document.createElement('span');
+  fromEl.className = 'redirect-step__host';
+  fromEl.textContent = labels.from || formatUrl(record.finalUrl);
+  row.appendChild(fromEl);
+
+  const arrow = document.createElement('span');
+  arrow.className = 'redirect-step__arrow';
+  arrow.textContent = '⇢';
+  row.appendChild(arrow);
+
+  const toEl = document.createElement('span');
+  toEl.className = 'redirect-step__to';
+  toEl.textContent = labels.to || formatUrl(landing.url);
+  row.appendChild(toEl);
+
+  // Same affordance as the card title; a masked URL may not work, so it stays inert.
+  if (!landing.redacted) {
+    const open = (event: MouseEvent): void => {
+      const middle = event.type === 'auxclick' && event.button === 1;
+      if (middle || event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        void browser.tabs.create({ url: landing.url });
+      }
+    };
+    row.addEventListener('click', open);
+    row.addEventListener('auxclick', open);
+  }
+
+  return row;
+}
+
 /** Human chain duration; empty string when timestamps are absent or implausible. */
 function formatChainDuration(record: RedirectRecord): string {
   const start = Date.parse(record.initiatedAt ?? '');
@@ -1164,6 +1216,8 @@ function renderRedirectItem(record: RedirectRecord): DocumentFragment {
   events.forEach((step) => {
     stepsEl.appendChild(renderRedirectStep(step));
   });
+  const landingStep = renderLandingStep(record, 'li');
+  if (landingStep) stepsEl.appendChild(landingStep);
 
   // Bottom row: hop count (+ duration) right above the final status line
   const bottomEl = document.createElement('div');
@@ -1269,6 +1323,10 @@ function renderSatelliteItem(record: RedirectRecord): HTMLElement {
   }
   titleEl.title = `${record.initialUrl || ''} \u2192 ${finalUrl}`;
   routeEl.appendChild(titleEl);
+
+  // A satellite can carry the client-side landing too \u2014 show it, not just its existence.
+  const landingStep = renderLandingStep(record, 'div');
+  if (landingStep) row.appendChild(landingStep);
 
   // Bottom row: hop badge + classification, mirroring the main card layout
   const bottomEl = document.createElement('div');

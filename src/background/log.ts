@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import type { RedirectRecord } from '../shared/types/redirect';
+import type { ClientLanding, RedirectRecord } from '../shared/types/redirect';
 import { MAX_RECORDS, REDIRECT_LOG_KEY } from './helpers';
 
 let writeQueue: Promise<void> = Promise.resolve();
@@ -24,6 +24,14 @@ export function appendRedirectRecord(record: RedirectRecord): Promise<void> {
   return mutateLog((log) => [record, ...log].slice(0, MAX_RECORDS)).catch((error) => {
     console.error('Failed to append redirect record', error);
   });
+}
+
+/**
+ * Attach a settled client-side landing to an already persisted record. A record
+ * that is gone (cleared, or pushed out by MAX_RECORDS) is left gone.
+ */
+export function updateClientLanding(id: string, landing: ClientLanding): Promise<void> {
+  return mutateLog((log) => log.map((record) => (record.id === id ? { ...record, clientLanding: landing } : record)));
 }
 
 /** Write `record` as the only entry, but only when the log is empty. */
